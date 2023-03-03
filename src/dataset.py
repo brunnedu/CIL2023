@@ -5,7 +5,16 @@ from PIL import Image
 
 
 class SatelliteDataset(Dataset):
+    """
+    Dataset for loading satellite images and corresponding roadmap mask labels
+    """
     def __init__(self, data_dir='data'):
+        """
+        Parameters
+        ----------
+        data_dir
+            Directory where the data is located. Has to contain two subdirectories "images/" & "groundtruth/".
+        """
         self.data_dir = data_dir
         self.img_paths = sorted([os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images'))])
         self.mask_paths = sorted([os.path.join(self.data_dir, 'groundtruth', f) for f in os.listdir(os.path.join(self.data_dir, 'groundtruth'))])
