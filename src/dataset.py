@@ -7,20 +7,22 @@ from PIL import Image
 class SatelliteDataset(Dataset):
     def __init__(self, data_dir='data'):
         self.data_dir = data_dir
+        self.img_paths = sorted([os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images'))])
+        self.mask_paths = sorted([os.path.join(self.data_dir, 'groundtruth', f) for f in os.listdir(os.path.join(self.data_dir, 'groundtruth'))])
         self.transform = transforms.ToTensor()
 
     def __len__(self):
-        return 144  # assuming there are 144 images in total
+        return len(self.img_paths)
 
     def __getitem__(self, idx):
-        image_path = os.path.join(self.data_dir, 'images', f'satimage_{idx}.png')
-        mask_path = os.path.join(self.data_dir, 'groundtruth', f'satimage_{idx}.png')
+        img_path = self.img_paths[idx]
+        mask_path = self.mask_paths[idx]
 
-        image = Image.open(image_path)
+        img = Image.open(img_path)
         mask = Image.open(mask_path)
 
         if self.transform is not None:
-            image = self.transform(image)
+            img = self.transform(img)
             mask = self.transform(mask)
 
-        return image, mask
+        return img, mask
