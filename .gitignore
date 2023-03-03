@@ -131,4 +131,7 @@ dmypy.json
 
 # Custom rules
 
+.DS_Store
+.idea/
+
 data/
