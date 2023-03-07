@@ -4,7 +4,7 @@ import torchvision
 from abc import ABC, abstractmethod
 import typing as t
 
-from models.unet.blocks import DownBlock
+from .blocks import DownBlock
 
 class ABackbone(nn.Module, ABC):
     def __init__(self):
