@@ -8,7 +8,7 @@ class SatelliteDataset(Dataset):
     """
     Dataset for loading satellite images and corresponding roadmap mask labels
     """
-    def __init__(self, data_dir='data'):
+    def __init__(self, data_dir='data/training'):
         """
         Parameters
         ----------
