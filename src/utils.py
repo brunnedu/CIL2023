@@ -12,6 +12,7 @@ from torch import nn
 from torch.optim import Optimizer
 from torchvision.transforms import Normalize
 from matplotlib import pyplot as plt
+import cv2
 
 
 def fix_all_seeds(seed: int) -> None:
@@ -123,7 +124,7 @@ def save_model(model: nn.Module, experiment_id: str, filename: str):
 
 
 def display_image(
-        image: Union[torch.Tensor, List[torch.Tensor]],
+        img: Union[torch.Tensor, List[torch.Tensor]],
         normalization_params: Dict = None,
         plt_title: str = None,
         nrow: int = 8,
@@ -131,20 +132,42 @@ def display_image(
     """
     Display a single or multiple torch.Tensor images.
     """
-    if not (isinstance(image, torch.Tensor) and len(image.shape) == 3):
+    if not (isinstance(img, torch.Tensor) and len(img.shape) == 3):
         # place images into grid
-        image = torchvision.utils.make_grid(image, nrow=nrow)
+        image = torchvision.utils.make_grid(img, nrow=nrow)
 
     if normalization_params is not None:
         # reverse normalization according to normalization dict
         norm_mean, norm_std = np.array(normalization_params['mean']), np.array(normalization_params['std'])
         reverse_normalize = Normalize(mean=-norm_mean / norm_std, std=1 / norm_std)
-        image = reverse_normalize(image)
+        img = reverse_normalize(img)
 
-    img_np = image.numpy()
+    img_np = img.numpy()
     # shuffle the color channels correctly
     plt.imshow(np.transpose(img_np, (1, 2, 0)))
 
     # plot
     plt.title(plt_title)
+    plt.show()
+
+
+def display_sample(
+        sample: Tuple[torch.Tensor, torch.Tensor],
+):
+    """
+    Display a single dataset sample.
+    """
+    img, mask = sample
+
+    img = np.transpose(img.numpy(), (1, 2, 0))
+    mask = np.transpose(mask.numpy(), (1, 2, 0))
+
+    # overlay image and red mask
+    red_mask = np.zeros_like(img)
+    red_mask[:, :] = (255, 0, 0)
+    red_mask = cv2.bitwise_and(red_mask, red_mask, mask=mask)
+    overlay = cv2.addWeighted(red_mask, 0.5, img, 1, 0)
+
+    # plot
+    plt.imshow(overlay)
     plt.show()
