@@ -163,10 +163,9 @@ def display_sample(
     mask = np.transpose(mask.numpy(), (1, 2, 0))
 
     # overlay image and red mask
-    red_mask = np.zeros_like(img)
-    red_mask[:, :] = (255, 0, 0)
-    red_mask = cv2.bitwise_and(red_mask, red_mask, mask=mask)
-    overlay = cv2.addWeighted(red_mask, 0.5, img, 1, 0)
+    red_mask = np.copy(img)
+    red_mask[np.squeeze(mask > 0)] = [1, 0, 0]
+    overlay = 0.8 * img + 0.2 * red_mask
 
     # plot
     plt.imshow(overlay)
