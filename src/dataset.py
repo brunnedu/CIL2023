@@ -16,7 +16,7 @@ class SatelliteDataset(Dataset):
     def __init__(
             self,
             data_dir: str = 'data/training',
-            add_data_dir: str = None,
+            add_data_dir: Optional[str] = None,
             transform: Optional[nn.Module] = RESNET_RESIZE,
     ):
         """

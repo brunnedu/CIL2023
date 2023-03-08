@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.optim import Optimizer
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 
 from src.utils import fix_all_seeds, create_logger, load_checkpoint, save_model, save_checkpoint, save_plotting_data
 
@@ -14,10 +14,9 @@ from src.utils import fix_all_seeds, create_logger, load_checkpoint, save_model,
 def train_model(
         experiment_id: str,
         model: nn.Module,
-        ds_train: Dataset,
-        ds_val: Dataset,
-        device: str,
+        dataset: Dataset,
         criterion: nn.Module,
+        val_frac: float = 0.1,
         optimizer: Optional[Optimizer] = None,
         num_epochs: int = 100,
         batch_size: int = 64,
@@ -28,6 +27,7 @@ def train_model(
         seed: int = 0,
         logger: logging.Logger = None,
         save_models: bool = True,
+        device: Optional[str] = None,
 ) -> float:
     """
     Training loop.
@@ -38,6 +38,12 @@ def train_model(
     # create logger with file and console stream handlers
     if logger is None:
         logger = create_logger(experiment_id)
+
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # train-val split
+    ds_train, ds_val = random_split(dataset, [1-val_frac, val_frac], generator=torch.Generator().manual_seed(seed))
 
     # create data loaders
     train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=num_workers)
