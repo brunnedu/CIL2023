@@ -28,7 +28,7 @@ class UNetPPLayer(nn.Module):
         return outputs   
 
 class UNetPP(nn.Module):
-    def __init__(self, backbone : ABackbone):
+    def __init__(self, backbone : ABackbone, up_block: t.Callable):
         super().__init__()
 
         # down nodes / encoder
@@ -38,13 +38,13 @@ class UNetPP(nn.Module):
         channels = self.backbone.get_channels()
         layers = []
         for i in reversed(range(1, len(channels))):
-            layer = UNetPPLayer(channels[:i])
+            layer = UNetPPLayer(channels[:i], up_block)
             layers.append(layer)
 
         self.layers = nn.ModuleList(layers)
 
         self.final = nn.Sequential(
-            nn.LazyConv2d(1, kernel_size=1),
+            nn.LazyConvTranspose2d(1, kernel_size=2, stride=2),
             nn.BatchNorm2d(1),
             nn.Sigmoid()
         )

@@ -23,7 +23,7 @@ class UNet(nn.Module):
         self.ups = nn.ModuleList(ups)
 
         self.final = nn.Sequential(
-            nn.LazyConv2d(1, kernel_size=1),
+            nn.LazyConvTranspose2d(1, kernel_size=2, stride=2),
             nn.BatchNorm2d(1),
             nn.Sigmoid()
         )
@@ -32,7 +32,7 @@ class UNet(nn.Module):
         outs, x = self.backbone(x)
 
         b = outs[-1]
-        for s,up in zip(reversed(outs[:-1]),self.ups):
+        for s,up in zip(reversed(outs[:-1]),reversed(self.ups)):
             b = up(b, [s])
 
         return self.final(b)
