@@ -43,7 +43,7 @@ def train_model(
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # train-val split
-    ds_train, ds_val = random_split(dataset, [1-val_frac, val_frac], generator=torch.Generator().manual_seed(seed))
+    ds_train, ds_val = random_split(dataset, [1 - val_frac, val_frac], generator=torch.Generator().manual_seed(seed))
 
     # create data loaders
     train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -113,28 +113,15 @@ def train(
     # switch to training mode
     model.train()
 
-    for i, (input, target) in enumerate(train_loader):
+    for i, (inputs, labels) in enumerate(train_loader):
         curr_time = time.time()
+        curr_batch_size = inputs.size(0)
 
-        target = target.long().to(device)  # cross entropy loss function expects long type
+        # TODO: adjust inputs data type according to criterion
+        # inputs = inputs.long().to(device)  # cross entropy loss function expects long type
 
-        if isinstance(input, list):  # pretext tasks
-            if len(input) == 2:  # original pretext task
-                center, neighbor = input
-                output = model(center.to(device), neighbor.to(device))
-                loss = criterion(output, target)
-            elif len(input) == 3:  # our pretext task with 3 patches
-                center, neighbor1, neighbor2 = input
-                output1, output2 = model(center.to(device), neighbor1.to(device), neighbor2.to(device))
-                loss = criterion(output1, output2, target)
-            else:  # our pretext task with 4 patches
-                center1, neighbor1, center2, neighbor2 = input
-                output1, output2 = model(center1.to(device), neighbor1.to(device), center2.to(device),
-                                         neighbor2.to(device))
-                loss = criterion(output1, output2, target)
-        else:  # downstream task
-            output = model(input.to(device))
-            loss = criterion(output, target)
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
 
         # compute gradient and do update step
         optimizer.zero_grad()
@@ -142,7 +129,7 @@ def train(
         optimizer.step()
 
         # record loss and batch processing time
-        losses.update(loss.item(), target.size(0))
+        losses.update(loss.item(), curr_batch_size)
         batch_time.update(time.time() - curr_time)
 
         # log after every `log_frequency` batches
@@ -152,7 +139,7 @@ def train(
                   'Speed {speed:.1f} samples/s\t' \
                   'Loss {loss.val:.5f} ({loss.avg:.5f})'.format(
                 epoch, i, len(train_loader) - 1, batch_time=batch_time,
-                speed=target.size(0) / batch_time.val, loss=losses)
+                speed=curr_batch_size / batch_time.val, loss=losses)
             logger.info(msg)
 
     # save plotting data for later use
@@ -179,51 +166,18 @@ def validate(
     # switch to evaluation mode
     model.eval()
 
-    # for the computation of accuracy at the end
-    all_preds = []  # all predicted class labels
-    all_labels = []  # all true class labels
-
     with torch.no_grad():
-        for i, (input, target) in enumerate(val_loader):
+        for i, (inputs, labels) in enumerate(val_loader):
             curr_time = time.time()
 
-            target = target.long().to(device)  # cross entropy loss function expects long type
+            # TODO: adjust inputs data type according to criterion
+            # inputs = inputs.long().to(device)  # cross entropy loss function expects long type
 
-            if isinstance(input, list):  # pretext tasks
-                if len(input) == 2:  # original pretext task
-                    center, neighbor = input
-                    output = model(center.to(device), neighbor.to(device))
-                    loss = criterion(output, target)
-
-                    # update list of labels and predictions for computation of accuracy
-                    all_preds.append(torch.argmax(output, dim=1).cpu().numpy())  # class label = index of max logit
-                    all_labels.append(target.detach().cpu().numpy())
-                else:  # our pretext tasks
-                    if len(input) == 3:  # our pretext task with 3 patches
-                        center, neighbor1, neighbor2 = input
-                        output1, output2 = model(center.to(device), neighbor1.to(device), neighbor2.to(device))
-                        loss = criterion(output1, output2, target)
-                    else:  # our pretext task with 4 patches
-                        center1, neighbor1, center2, neighbor2 = input
-                        output1, output2 = model(center1.to(device), neighbor1.to(device), center2.to(device),
-                                                 neighbor2.to(device))
-                        loss = criterion(output1, output2, target)
-
-                    # update list of labels and predictions for computation of accuracy (our tasks contain 2 classifiaction tasks!)
-                    all_preds.append(torch.argmax(output1, dim=1).cpu().numpy())  # class label = index of max logit
-                    all_preds.append(torch.argmax(output2, dim=1).cpu().numpy())
-                    all_labels.append(target.detach().cpu().numpy())
-                    all_labels.append(target.detach().cpu().numpy())
-            else:  # downstream task
-                output = model(input.to(device))
-                loss = criterion(output, target)
-
-                # update list of labels and predictions for computation of accuracy
-                all_preds.append(torch.argmax(output, dim=1).cpu().numpy())  # class label = index of max logit
-                all_labels.append(target.detach().cpu().numpy())
+            outputs = model(inputs.to(device))
+            loss = criterion(outputs, labels)
 
             # record loss and batch processing time
-            losses.update(loss.item(), target.size(0))
+            losses.update(loss.item(), labels.size(0))
             batch_time.update(time.time() - curr_time)
 
             # log after every `log_frequency` batches
@@ -235,18 +189,10 @@ def validate(
                     loss=losses)
                 logger.info(msg)
 
-        # calculate accuracy for entire validation set
-        all_preds = np.concatenate(all_preds, axis=0)
-        all_labels = np.concatenate(all_labels, axis=0)
-        accuracy = (all_preds == all_labels).sum() / all_preds.shape[0]
-
-        logger.info('Accuracy: {:.3f}'.format(accuracy))
-
         # save plotting data for later use
         save_plotting_data(experiment_id, "valid_loss", epoch, losses.avg)
-        save_plotting_data(experiment_id, "valid_acc", epoch, accuracy)
 
-    return accuracy
+    return losses.avg
 
 
 class AverageMeter(object):
@@ -254,6 +200,7 @@ class AverageMeter(object):
     Computes and stores the average and current value for some metric.
     Adopted from: https://github.com/microsoft/human-pose-estimation.pytorch/blob/master/lib/core/function.py
     """
+
     def __init__(self):
         self.reset()
 
