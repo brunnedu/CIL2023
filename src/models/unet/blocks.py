@@ -36,16 +36,22 @@ class UpBlock(nn.Module):
         that it concatenates and applies convolutions on.
 
         nr_channels: The number of channels on this layer
+        up_mode: 
+            - upconv: use ConvTranspose2d to scale up image
+            - upsample: use bilinear interpolation to scale up image
 
         Usually b is from one level below and 
         - UNet++: s are all outputs from the same level
         - UNet: s is previous output wrapped in a list
     '''
 
-    def __init__(self, nr_channels : int):
+    def __init__(self, nr_channels : int, up_mode : str = 'upconv'):
         super().__init__()
 
-        self.up = nn.LazyConvTranspose2d(nr_channels, kernel_size=2, stride=2)
+        if up_mode == 'upconv':
+            self.up = nn.LazyConvTranspose2d(nr_channels, kernel_size=2, stride=2)
+        elif up_mode == 'upsample':
+            self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
 
         self.layer = nn.Sequential(
             nn.LazyConv2d(nr_channels, kernel_size=3, padding=1),

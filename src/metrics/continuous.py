@@ -1,15 +1,15 @@
 '''
-    Losses taking floating point tensors as inputs
+    Metrics taking floating point tensors as inputs
 '''
 
 import torch.nn as nn
 import torch.functional as F
 
-class IoULoss(nn.Module):
+class JaccardLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(y_pred, y_true):
+    def forward(self, y_pred, y_true):
         tp = (y_true * y_pred).sum()
         p = (y_true + y_pred - y_true * y_pred).sum()
         return  tp / p
@@ -25,11 +25,11 @@ class DiceLoss(nn.Module):
         return 1.0 - ((2.0 * (y_pred * y_true).sum(1) + self.smooth) / ((y_pred + y_true).sum(1) + self.smooth)).mean()
 
 class FocalLoss(nn.Module):
-    def __init__(self, alpha=0.25, gamma=2.0, reduction="none"):
+    def __init__(self, alpha=0.25, gamma=2.0, bce_reduction="none"):
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma
-        self.reduction = reduction
+        self.reduction = bce_reduction
     
     def forward(self, y_pred, y_true):
         bce_loss = F.binary_cross_entropy(y_pred, y_true, reduction=self.reduction)

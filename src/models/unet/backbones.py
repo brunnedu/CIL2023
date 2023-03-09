@@ -18,6 +18,51 @@ class ABackbone(nn.Module, ABC):
         '''
         pass
 
+class GenericBackbone(ABackbone):
+    ''' 
+        A generic backbone that replicates a module for each layer and adjusts the number of channels
+        
+        Parameters:
+            - channels: list of integers that represents the output channel on each level, 
+                        e.g. [4, 16, 32, 32, 64] (=> network with depth 5)
+            - down_block_ctor: function that constructs a down block when given the amount of output channels
+                        e.g. lambda ci: DownBlock(LazyConvBlock(ci), MaxPool)
+    '''
+    def __init__(self, channels : t.List[int], 
+                 down_block_ctor : t.Callable[[int], DownBlock]):
+        super().__init__()
+
+        self.channels = channels
+        self.layers = nn.ModuleList([down_block_ctor(ci) for ci in channels])
+
+    def forward(self, x):
+        outputs = [] # outputs of all layers
+
+        for layer in self.layers:
+            o,x = layer(x)
+            outputs.append(o)
+
+        return outputs, x
+
+    def get_channels(self):
+        return self.channels
+    
+class SimpleBackbone(GenericBackbone):
+    def __init__(self, channels: t.List[int]):
+        down_block_ctor = lambda ci : DownBlock(
+            block=nn.Sequential(
+                nn.LazyConv2d(ci, kernel_size=3, padding=1),
+                nn.BatchNorm2d(ci),
+                nn.ReLU(inplace=True),
+
+                nn.Conv2d(ci, ci, kernel_size=3, padding=1),
+                nn.BatchNorm2d(ci),
+                nn.ReLU(inplace=True),
+            ),
+            pool=nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+
+        super().__init__(channels, down_block_ctor)
 
 class Resnet18Backbone(ABackbone):
     def __init__(self):
