@@ -6,3 +6,5 @@
 
 # Supported Backbones:
 1. Resnet18
+1. Generic (specify a module that will be replicated on each level)
+1. Simple (Conv, Bn, ReLU, Conv, Bn, ReLU, MaxPool)
