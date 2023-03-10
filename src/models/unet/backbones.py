@@ -4,7 +4,9 @@ import torchvision
 from abc import ABC, abstractmethod
 import typing as t
 
-from models.unet.blocks import DownBlock
+from torchvision.models import ResNet18_Weights
+
+from .blocks import DownBlock
 
 class ABackbone(nn.Module, ABC):
     def __init__(self):
@@ -68,7 +70,7 @@ class Resnet18Backbone(ABackbone):
     def __init__(self):
         super().__init__()
         
-        resnet = torchvision.models.resnet.resnet18(pretrained=True)
+        resnet = torchvision.models.resnet.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
         children = list(resnet.children())
 
         modules = []

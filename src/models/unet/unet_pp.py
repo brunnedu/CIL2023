@@ -3,7 +3,7 @@ import torch.nn as nn
 
 import typing as t
 
-from models.unet.backbones import ABackbone
+from .backbones import ABackbone
 
 class UNetPPLayer(nn.Module):
     '''
