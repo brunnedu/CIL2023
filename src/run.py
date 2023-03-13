@@ -58,4 +58,4 @@ def run_model(
 
             # log after every `log_frequency` batches
             if i % log_frequency == 0 or i == len(dataloader) - 1:
-                logger.info(f'Run {i}/{len(dataloader)}')
+                logger.info(f'Run {i}/{len(dataloader) - 1}')
