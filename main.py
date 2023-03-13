@@ -40,6 +40,7 @@ def train(data_dir, add_data_dir, experiment_id, resume_from_checkpoint):
 
     model = UNet(Resnet18Backbone(), lambda ci: UpBlock(ci, up_mode='upsample'))
     criterion = FocalLoss()
+    accuracy_fn = BinaryF1Score(alpha=100.0) # OneMinusLossScore(FocalLoss())
     optimizer = Adam(model.parameters(), lr=0.001)
 
     if experiment_id is None:
@@ -50,6 +51,7 @@ def train(data_dir, add_data_dir, experiment_id, resume_from_checkpoint):
         model=model,
         dataset=dataset,
         criterion=criterion,
+        accuracy_fn=accuracy_fn,
         val_frac=0.15,
         optimizer=optimizer,
         num_epochs=5,

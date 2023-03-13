@@ -15,7 +15,8 @@ def train_model(
         experiment_id: str,
         model: nn.Module,
         dataset: Dataset,
-        criterion: nn.Module,
+        criterion: nn.Module, # loss function: lower is better
+        accuracy_fn: nn.Module, # accuracy function (only for validation): higher is better
         val_frac: float = 0.1,
         optimizer: Optional[Optimizer] = None,
         num_epochs: int = 100,
@@ -73,7 +74,7 @@ def train_model(
         train(experiment_id, model, train_loader, device, criterion, optimizer, epoch, logger, log_frequency)
 
         # evaluate on validation set
-        acc = validate(experiment_id, model, val_loader, device, criterion, epoch, logger, log_frequency)
+        acc = validate(experiment_id, model, val_loader, device, criterion, accuracy_fn, epoch, logger, log_frequency)
 
         # save best model so far
         if acc > best_acc:
@@ -156,6 +157,7 @@ def validate(
         val_loader: DataLoader,
         device: str,
         criterion: nn.Module,
+        accuracy_fn: nn.Module,
         epoch: int,
         logger: logging.Logger,
         log_frequency: int,
@@ -166,6 +168,7 @@ def validate(
     # keep track of batch processing time and losses
     batch_time = AverageMeter()
     losses = AverageMeter()
+    accuracies = AverageMeter()
 
     # switch to evaluation mode
     model.eval()
@@ -179,24 +182,26 @@ def validate(
 
             outputs = model(inputs.to(device))
             loss = criterion(outputs, labels)
+            accuracy = accuracy_fn(outputs, labels)
 
-            # record loss and batch processing time
+            # record loss, accuracy and batch processing time
             losses.update(loss.item(), labels.size(0))
+            accuracies.update(accuracy.item(), labels.size(0))
             batch_time.update(time.time() - curr_time)
 
             # log after every `log_frequency` batches
             if i % log_frequency == 0 or i == len(val_loader) - 1:
-                msg = 'Test: [{0}/{1}]\t' \
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t' \
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
-                    i, len(val_loader) - 1, batch_time=batch_time,
-                    loss=losses)
+                msg = f'Test: [{i}/{len(val_loader) - 1}]\t' \
+                      f'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t' \
+                      f'Loss {losses.val:.4f} ({losses.avg:.4f})\t' \
+                      f'Accuracy {accuracies.val:.4f} ({accuracies.avg:.4f})'
                 logger.info(msg)
 
         # save plotting data for later use
         save_plotting_data(experiment_id, "valid_loss", epoch, losses.avg)
+        save_plotting_data(experiment_id, "valid_acc", epoch, accuracies.avg)
 
-    return losses.avg
+    return accuracies.avg
 
 
 class AverageMeter(object):
