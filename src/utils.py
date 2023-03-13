@@ -3,7 +3,7 @@ import logging
 import os
 import random
 import time
-from typing import Tuple, Union, List, Dict
+from typing import Optional, Tuple, Union, List, Dict
 
 import numpy as np
 import torch
@@ -122,6 +122,17 @@ def save_model(model: nn.Module, experiment_id: str, filename: str):
     experiment_dir = os.path.join("out", experiment_id)
     torch.save(model.state_dict(), os.path.join(experiment_dir, filename))
 
+def load_model(model: nn.Module, experiment_id: str, filename : str) -> nn.Module:
+    """
+    Loads the model from an experiment
+    """
+    experiment_dir = os.path.join("out", experiment_id)
+    file = torch.load(os.path.join(experiment_dir, filename))
+
+    # restore model
+    model.load_state_dict(file)
+
+    return model
 
 def display_image(
         img: Union[torch.Tensor, List[torch.Tensor]],
