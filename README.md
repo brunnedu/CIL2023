@@ -8,7 +8,8 @@ We recommend using the conda package manager. Navigate to the CIL2023 folder and
 `pip install -r requirements.txt`
 
 You can then train the model by executing: \
-`python main.py train "./data" -n`
+`python main.py train "path to training data" -id "experiment name"` \
+In case the training crashes and you want to resume from the last checkpoint, use the `-r` flag.
 
 To see a list of all available commands type: \
 `python main.py --help`
