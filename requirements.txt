@@ -4,3 +4,5 @@ torchvision
 Pillow
 
 click
+matplotlib
+opencv-python

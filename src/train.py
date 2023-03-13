@@ -62,6 +62,10 @@ def train_model(
     best_acc = 0.0
     if resume_from_checkpoint:
         logger.info(f"Loading checkpoint from ./out/{experiment_id}/checkpoint.pth.tar")
+
+        if fix_seed:
+            logger.info(f"Training will not be reproducible because you resumed from a checkpoint!")
+
         model, optimizer, start_epoch, best_acc = load_checkpoint(experiment_id, model, optimizer)
 
     for epoch in range(start_epoch, num_epochs):
