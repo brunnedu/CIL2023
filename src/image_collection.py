@@ -29,7 +29,7 @@ def process_image(lat: float, lng: float, roadmap=True, zoom=18, size=400) -> Tu
     :param roadmap: if roadmap images should be used, otherwise satellite images will be fetched
     :param zoom: zoom of images
     :param size: size of the images
-    :return: tuple(image, Google Maps api url)
+    :return: tuple(image, Google Maps api url without API key)
     """
     map_type = "roadmap" if roadmap else "satellite"
     border_size = 25
@@ -58,14 +58,14 @@ def process_image(lat: float, lng: float, roadmap=True, zoom=18, size=400) -> Tu
         img_streets = np.array(img_mask, dtype=np.uint8) * 255
         image = Image.fromarray(img_streets)
 
-    return image, url
+    return image, url.replace(api_key, "GMAPS_API_KEY")
 
 
 def process_location(location, log_file, satellite_path, roadmap_path) -> None:
     """
     Processes location according to config file.
 
-    :param location: location dictionary, see configs/example.json
+    :param location: location dictionary, see configs/data_2022.json
     :param log_file: log file
     :param satellite_path: output directory for satellite images
     :param roadmap_path :output directory for roadmap images
@@ -102,8 +102,8 @@ def main(config_path, output_path):
             with open(config_path) as config_file:
                 config = json.load(config_file)
 
-            satellite_path = os.path.join(output_path, "groundtruth")
-            roadmap_path = os.path.join(output_path, "images")
+            satellite_path = os.path.join(output_path, "images")
+            roadmap_path = os.path.join(output_path, "groundtruth")
             os.makedirs(satellite_path, exist_ok=True)
             os.makedirs(roadmap_path, exist_ok=True)
 
