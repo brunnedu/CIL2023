@@ -1,12 +1,14 @@
 import os
 from typing import Optional
 
+import torch
 import torchvision
-from torch import nn
 from torch.utils.data import Dataset
 from torchvision.io import ImageReadMode
 
-from src.transforms import RESNET_RESIZE
+from albumentations.core.composition import BaseCompose
+
+from src.transforms import AUG_TRANSFORM
 
 
 class SatelliteDataset(Dataset):
@@ -17,7 +19,7 @@ class SatelliteDataset(Dataset):
             self,
             data_dir: str = 'data/training',
             add_data_dir: Optional[str] = None,
-            transform: Optional[nn.Module] = RESNET_RESIZE,
+            aug_transform: Optional[BaseCompose] = AUG_TRANSFORM,
     ):
         """
         Parameters
@@ -28,14 +30,14 @@ class SatelliteDataset(Dataset):
         add_data_dir
             Directory where additional data is located. Has to contain two subdirectories "images" & "groundtruth".
             Both subdirectories should contain files with matching names.
-        transform
-            A torchvision transform that is applied to every loaded image.
+        aug_transform
+            An albumentation transform that is applied to both the satellite image and the road mask .
         """
         self.data_dir = data_dir
         self.add_data_dir = add_data_dir
         self.img_paths = sorted([os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images'))])
         self.mask_paths = sorted([os.path.join(self.data_dir, 'groundtruth', f) for f in os.listdir(os.path.join(self.data_dir, 'groundtruth'))])
-        self.transform = transform
+        self.aug_transform = aug_transform
 
         if self.add_data_dir:
             # add additional data
@@ -58,8 +60,9 @@ class SatelliteDataset(Dataset):
         img = torchvision.io.read_image(img_path, mode=ImageReadMode.RGB)/255
         mask = torchvision.io.read_image(mask_path, mode=ImageReadMode.GRAY)/255
 
-        if self.transform is not None:
-            img = self.transform(img)
-            mask = self.transform(mask)
+        if self.aug_transform is not None:
+            transformed = self.aug_transform(image=img.permute(1, 2, 0).numpy(), mask=mask.permute(1, 2, 0).numpy())
+            img, mask = torch.from_numpy(transformed['image']).permute(2, 0, 1), torch.from_numpy(
+                transformed['mask']).permute(2, 0, 1)
 
         return img, mask

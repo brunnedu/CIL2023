@@ -1,6 +1,8 @@
-from torchvision.transforms import Compose
-from torchvision.transforms import Resize
+import albumentations as A
 
-RESNET_RESIZE = Compose([
-    Resize(224),
+AUG_TRANSFORM = A.Compose([
+    A.Resize(height=224, width=224),
+    A.HorizontalFlip(p=0.5),
+    A.VerticalFlip(p=0.5),
+    A.RandomRotate90(p=0.5),
 ])
