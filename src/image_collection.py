@@ -29,7 +29,7 @@ def process_image(lat: float, lng: float, roadmap=True, zoom=18, size=400) -> Tu
     :param roadmap: if roadmap images should be used, otherwise satellite images will be fetched
     :param zoom: zoom of images
     :param size: size of the images
-    :return: tuple(image, Google Maps api url)
+    :return: tuple(image, Google Maps api url without API key)
     """
     map_type = "roadmap" if roadmap else "satellite"
     border_size = 25
@@ -58,7 +58,7 @@ def process_image(lat: float, lng: float, roadmap=True, zoom=18, size=400) -> Tu
         img_streets = np.array(img_mask, dtype=np.uint8) * 255
         image = Image.fromarray(img_streets)
 
-    return image, url
+    return image, url.replace(api_key, "GMAPS_API_KEY")
 
 
 def process_location(location, log_file, satellite_path, roadmap_path) -> None:
