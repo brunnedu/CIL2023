@@ -65,7 +65,7 @@ def process_location(location, log_file, satellite_path, roadmap_path) -> None:
     """
     Processes location according to config file.
 
-    :param location: location dictionary, see configs/example.json
+    :param location: location dictionary, see configs/data_2022.json
     :param log_file: log file
     :param satellite_path: output directory for satellite images
     :param roadmap_path :output directory for roadmap images
@@ -102,8 +102,8 @@ def main(config_path, output_path):
             with open(config_path) as config_file:
                 config = json.load(config_file)
 
-            satellite_path = os.path.join(output_path, "groundtruth")
-            roadmap_path = os.path.join(output_path, "images")
+            satellite_path = os.path.join(output_path, "images")
+            roadmap_path = os.path.join(output_path, "groundtruth")
             os.makedirs(satellite_path, exist_ok=True)
             os.makedirs(roadmap_path, exist_ok=True)
 
