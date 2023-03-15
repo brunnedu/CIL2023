@@ -134,7 +134,7 @@ def display_image(
     """
     if not (isinstance(img, torch.Tensor) and len(img.shape) == 3):
         # place images into grid
-        image = torchvision.utils.make_grid(img, nrow=nrow)
+        img = torchvision.utils.make_grid(img, nrow=nrow)
 
     if normalization_params is not None:
         # reverse normalization according to normalization dict
