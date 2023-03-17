@@ -92,8 +92,11 @@ def run(data_dir, experiment_id):
     '''
     logger = create_logger(experiment_id)
 
+    with open(f'./out/{experiment_id}/config.json') as json_file:
+        config = json.load(json_file)
+
     dataset = SatelliteDatasetRun(data_dir)
-    model = UNet(Resnet18Backbone(), lambda ci: UpBlock(ci, up_mode='upsample'))
+    model = build_model(config['model'])
 
     run_model(
         experiment_id=experiment_id,
@@ -159,7 +162,7 @@ def conf():
     schema = complete_injector().hierarchical_schema()
     print(schema)
 
-    with open('schema.md', 'w') as f:
+    with open('CONFIG_SCHEMA.md', 'w') as f:
         f.write(schema)
 
 
