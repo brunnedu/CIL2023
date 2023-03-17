@@ -1,6 +1,6 @@
 import os
 import click
-import datetime;
+import datetime
 
 from torch.optim import Adam
 
@@ -22,19 +22,24 @@ def cli():
 @cli.command()
 # Directory where the original data is located. Has to contain two subdirectories "images" & "groundtruth". Both subdirectories should contain files with matching names.
 @click.argument('data_dir', type=click.Path(exists=True), required=True)
+# Unique ID for this experiment
+@click.argument('experiment_id', required=True)
 @click.option('-a', '--add_data_dir', 
               help='''Directory where additional data is located. Has to contain two subdirectories "images" & "groundtruth". 
                       Both subdirectories should contain files with matching names.''')
-@click.option('-id', '--experiment_id', 
-              help='Unique ID for this experiment')
+# In case you want to continue training, make sure to specify the experiment_id with the corresponding timestamp!
 @click.option('-r', '--resume_from_checkpoint', is_flag=True,
               help='Will resume from the last checkpoint of the corresponding experiment if set to true')
-def train(data_dir, add_data_dir, experiment_id, resume_from_checkpoint):
+def train(data_dir, experiment_id, add_data_dir, resume_from_checkpoint):
     '''
         Trains a model on all the provided data
     '''
     # TODO: add support for different data augmentation, models, loss functions etc
+    if not resume_from_checkpoint:
+        experiment_id = experiment_id + datetime.datetime.now().strftime('_%Y_%m_%d__%H_%M_%S')
+
     logger = create_logger(experiment_id)
+    logger.info(f'Full Experiment ID: {experiment_id}')
 
     dataset = SatelliteDataset(data_dir, add_data_dir)
 
@@ -42,9 +47,6 @@ def train(data_dir, add_data_dir, experiment_id, resume_from_checkpoint):
     criterion = FocalLoss()
     accuracy_fn = BinaryF1Score(alpha=100.0) # OneMinusLossScore(FocalLoss())
     optimizer = Adam(model.parameters(), lr=0.001)
-
-    if experiment_id is None:
-        experiment_id = datetime.datetime.now().strftime('%d_%m_%Y__%H_%M_%S')
 
     train_model(
         experiment_id=experiment_id,
@@ -67,6 +69,7 @@ def train(data_dir, add_data_dir, experiment_id, resume_from_checkpoint):
 @cli.command()
 # Directory that contains a subdirectory "images" which contains aerial images
 @click.argument('data_dir', type=click.Path(exists=True), required=True)
+# Unique ID for this experiment, make sure to use the full name (including the timestamp)
 @click.argument('experiment_id', required=True)
 def run(data_dir, experiment_id):
     '''
@@ -89,6 +92,7 @@ def run(data_dir, experiment_id):
 
 # Make sure to execute run first!
 @cli.command()
+# Unique ID for this experiment, make sure to use the full name (including the timestamp)
 @click.argument('experiment_id', required=True)
 @click.option('-t', '--foreground_threshold', default=0.5, 
               help='The foreground threshold that should be used when generating a submission')
