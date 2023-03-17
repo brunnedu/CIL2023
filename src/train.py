@@ -119,7 +119,7 @@ def train(
         curr_batch_size = inputs.size(0)
 
         # TODO: adjust inputs data type according to criterion
-        # inputs = inputs.long().to(device)  # cross entropy loss function expects long type
+        # inputs = inputs.long()  # cross entropy loss function expects long type
 
         outputs = model(inputs)
         loss = criterion(outputs, labels)
@@ -174,7 +174,7 @@ def validate(
             curr_time = time.time()
 
             # TODO: adjust inputs data type according to criterion
-            # inputs = inputs.long().to(device)  # cross entropy loss function expects long type
+            # inputs = inputs.long()  # cross entropy loss function expects long type
 
             outputs = model(inputs)
             loss = criterion(outputs, labels)
