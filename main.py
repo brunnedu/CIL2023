@@ -1,6 +1,8 @@
 import os
 import click
 import datetime
+import json
+import shutil
 
 from torch.optim import Adam
 
@@ -11,6 +13,7 @@ from src.models.unet.blocks import *
 from src.models.unet.unet import UNet
 from src.train import train_model
 from src.run import run_model
+from src.factory import *
 
 from src.mask_to_submission_old import masks_to_submission # TODO: use the 2023 mask_to_submission script once released
 from src.utils import create_logger 
@@ -24,13 +27,15 @@ def cli():
 @click.argument('data_dir', type=click.Path(exists=True), required=True)
 # Unique ID for this experiment
 @click.argument('experiment_id', required=True)
+# File that specifies the model, loss function etc
+@click.argument('config_file', type=click.Path(exists=True), required=True)
 @click.option('-a', '--add_data_dir', 
               help='''Directory where additional data is located. Has to contain two subdirectories "images" & "groundtruth". 
                       Both subdirectories should contain files with matching names.''')
 # In case you want to continue training, make sure to specify the experiment_id with the corresponding timestamp!
 @click.option('-r', '--resume_from_checkpoint', is_flag=True,
               help='Will resume from the last checkpoint of the corresponding experiment if set to true')
-def train(data_dir, experiment_id, add_data_dir, resume_from_checkpoint):
+def train(data_dir, experiment_id, add_data_dir, config_file, resume_from_checkpoint):
     '''
         Trains a model on all the provided data
     '''
@@ -41,10 +46,18 @@ def train(data_dir, experiment_id, add_data_dir, resume_from_checkpoint):
     logger = create_logger(experiment_id)
     logger.info(f'Full Experiment ID: {experiment_id}')
 
+    # copy current config to experiment folder
+    shutil.copy(config_file, f'./out/{experiment_id}/config.json')
+
+    # read config
+    with open(config_file) as json_file:
+        config = json.load(json_file)
+
+
     dataset = SatelliteDataset(data_dir, add_data_dir)
 
-    model = UNet(Resnet18Backbone(), lambda ci: UpBlock(ci, up_mode='upsample'))
-    criterion = FocalLoss()
+    model = build_model(config['model'])
+    criterion = build_criterion(config['criterion'])
     accuracy_fn = BinaryF1Score(alpha=100.0) # OneMinusLossScore(FocalLoss())
     optimizer = Adam(model.parameters(), lr=0.001)
 
@@ -135,6 +148,19 @@ def evaluate(ground_truth_dir, predicted_dir):
     # Execute
 
     # Generate Statistics
+
+
+@cli.command()
+def conf():
+    '''
+        Gives all the configuration options
+    '''
+
+    schema = complete_injector().hierarchical_schema()
+    print(schema)
+
+    with open('schema.md', 'w') as f:
+        f.write(schema)
 
 
 if __name__ == '__main__':
