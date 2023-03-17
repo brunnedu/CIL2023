@@ -49,12 +49,11 @@ class Injector:
         return arguments
 
     
-    def hierarchical_schema(self, depth : int = 0) -> str:
+    def hierarchical_schema(self) -> str:
         ''' Returns a markdown schema of this injector '''
         md = ''
-        depth_prefix = '&ensp;'*depth
         for key,injector in self.injectors.items():
-            md += f'''<details><summary>{depth_prefix}{key}</summary>{depth_prefix}{injector.hierarchical_schema(depth + 1)}</details>\n'''
+            md += f'''<blockquote><details><summary>{key}</summary>{injector.hierarchical_schema()}</details></blockquote>\n'''
         
         return md
     
@@ -90,17 +89,16 @@ class Proxy(Injector):
         arguments = super().build(data)
         return self.ctor(**arguments)
     
-    def hierarchical_schema(self, depth : int = 0) -> str:
+    def hierarchical_schema(self) -> str:
         ''' Returns a markdown schema of this injector '''
 
         args = signature(self.ctor).parameters
         if len(args.keys()) == 0: return ''
 
-        depth_prefix = '&ensp;'*depth
-
-        simple_args = ''.join([f'<br />{depth_prefix}&ensp;  - {p}' for v,p in signature(self.ctor).parameters.items() if v not in self.injectors.keys()])
-        md = f'{depth_prefix}&ensp;Arguments: {simple_args} \n'
+        simple_args = ''.join([f'<br /> - {p}' for v,p in signature(self.ctor).parameters.items() if v not in self.injectors.keys()])
+        md = f'<blockquote>Arguments: {simple_args} \n'
         for key,injector in self.injectors.items():
-            md += f'''<details><summary>{depth_prefix}- {key}</summary>{depth_prefix}{injector.hierarchical_schema(depth + 1)}</details>\n'''
+            md += f'''<blockquote><details><summary>{key}</summary>{injector.hierarchical_schema()}</details></blockquote>\n'''
+        md += '</blockquote>'
 
         return md
