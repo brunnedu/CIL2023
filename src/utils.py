@@ -3,7 +3,7 @@ import logging
 import os
 import random
 import time
-from typing import Optional, Tuple, Union, List, Dict
+from typing import Tuple, Union, List, Dict
 
 import numpy as np
 import torch
@@ -12,7 +12,6 @@ from torch import nn
 from torch.optim import Optimizer
 from torchvision.transforms import Normalize
 from matplotlib import pyplot as plt
-import cv2
 
 
 def fix_all_seeds(seed: int) -> None:
