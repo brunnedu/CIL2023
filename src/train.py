@@ -2,7 +2,6 @@ import logging
 import time
 from typing import Optional
 
-import numpy as np
 import torch
 from torch import nn
 from torch.optim import Optimizer
@@ -114,6 +113,8 @@ def train(
     model.train()
 
     for i, (inputs, labels) in enumerate(train_loader):
+        inputs, labels = inputs.to(device), labels.to(device)
+
         curr_time = time.time()
         curr_batch_size = inputs.size(0)
 
@@ -168,12 +169,14 @@ def validate(
 
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(val_loader):
+            inputs, labels = inputs.to(device), labels.to(device)
+
             curr_time = time.time()
 
             # TODO: adjust inputs data type according to criterion
             # inputs = inputs.long().to(device)  # cross entropy loss function expects long type
 
-            outputs = model(inputs.to(device))
+            outputs = model(inputs)
             loss = criterion(outputs, labels)
 
             # record loss and batch processing time
