@@ -2,6 +2,7 @@ import os
 from typing import Optional
 
 import torch
+from torch import nn
 import torchvision
 import torchvision.transforms.functional as F
 from torchvision.transforms import Normalize
@@ -10,7 +11,7 @@ from torchvision.io import ImageReadMode
 
 from albumentations.core.composition import BaseCompose
 
-from src.transforms import AUG_TRANSFORM, NORMALIZATION_PARAMS_2022, NORMALIZATION_PARAMS_EQUALIZED
+from src.transforms import AUG_TRANSFORM, NORMALIZATION_PARAMS_2022, NORMALIZATION_PARAMS_EQUALIZED, RUN_TRANSFORM
 
 
 class SatelliteDataset(Dataset):
@@ -87,33 +88,41 @@ class SatelliteDatasetRun(Dataset):
     def __init__(
             self,
             data_dir: str = 'data/test',
-            transform: Optional[nn.Module] = RESNET_RESIZE,
+            hist_equalization: bool = True,
+            transform: Optional[nn.Module] = RUN_TRANSFORM,
     ):
         """
         Parameters
         ----------
         data_dir
-            Directory where the original data is located. Has to contain two subdirectories "images" & "groundtruth".
-            Both subdirectories should contain files with matching names.
+            Directory where the test data is located. Has to contain a subdirectories named "images".
+        hist_equalization
+            Whether to apply histogram equalization as pre-processing step or not.
         transform
-            A torchvision transform that is applied to every loaded image.
+            A torchvision transform that is applied to the satellite images right after loading them.
         """
         self.data_dir = data_dir
-        self.img_names = os.listdir(os.path.join(self.data_dir, 'images'))
+        self.img_paths = [os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images'))]
+
+        self.hist_equalization = hist_equalization
         self.transform = transform
+        self.post_transform = Normalize(**NORMALIZATION_PARAMS_EQUALIZED) if hist_equalization else Normalize(**NORMALIZATION_PARAMS_2022)
 
     def __len__(self):
-        return len(self.img_names)
+        return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img_name = self.img_names[idx]
-        img_path = os.path.join(self.data_dir, 'images', img_name)
+        img_path = self.img_paths[idx]
 
-        img = torchvision.io.read_image(img_path, mode=ImageReadMode.RGB)/255
-        _,oh,ow = img.shape
-        original_size = (oh,ow)
+        img = torchvision.io.read_image(img_path, mode=ImageReadMode.RGB)
+        original_size = (img.shape[1].item(), img.shape[2].item())
 
-        if self.transform is not None:
+        if self.hist_equalization:
+            img = F.equalize(img)
+
+        if self.transform:
             img = self.transform(img)
 
-        return img_name, original_size, img
+        img = self.post_transform(img/255)
+
+        return img_path, original_size, img
