@@ -40,8 +40,8 @@ class SatelliteDataset(Dataset):
         """
         self.data_dir = data_dir
         self.add_data_dir = add_data_dir
-        self.img_paths = sorted([os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images'))])
-        self.mask_paths = sorted([os.path.join(self.data_dir, 'groundtruth', f) for f in os.listdir(os.path.join(self.data_dir, 'groundtruth'))])
+        self.img_paths = [os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images'))]
+        self.mask_paths = [os.path.join(self.data_dir, 'groundtruth', os.path.split(p)[-1]) for p in self.img_paths]
 
         self.hist_equalization = hist_equalization
         self.aug_transform = aug_transform
@@ -49,14 +49,10 @@ class SatelliteDataset(Dataset):
 
         if self.add_data_dir:
             # add additional data
-            self.img_paths += sorted(
-                [os.path.join(self.add_data_dir, 'images', f) for f in
-                 os.listdir(os.path.join(self.add_data_dir, 'images'))])
-            self.mask_paths += sorted(
-                [os.path.join(self.add_data_dir, 'groundtruth', f) for f in
-                 os.listdir(os.path.join(self.add_data_dir, 'groundtruth'))])
-
-        assert len(self.img_paths) == len(self.mask_paths), "number of satellite images doesn't match number of road masks"
+            add_img_paths = [os.path.join(self.add_data_dir, 'images', f) for f in os.listdir(os.path.join(self.add_data_dir, 'images'))]
+            add_mask_paths = [os.path.join(self.data_dir, 'groundtruth', os.path.split(p)[-1]) for p in add_img_paths]
+            self.img_paths += add_img_paths
+            self.mask_paths += add_mask_paths
 
     def __len__(self):
         return len(self.img_paths)
