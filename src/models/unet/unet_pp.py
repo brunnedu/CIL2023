@@ -45,7 +45,7 @@ class UNetPP(nn.Module):
     '''
     def __init__(self, backbone : ABackbone, 
                  up_block_ctor : t.Callable[[int], nn.Module], 
-                 final : nn.Module = None):
+                 final : t.Optional[nn.Module] = None):
         super().__init__()
 
         # down nodes / encoder

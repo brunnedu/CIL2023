@@ -7,10 +7,23 @@ We recommend using the conda package manager. Navigate to the CIL2023 folder and
 `conda activate cil`\
 `pip install -r requirements.txt`
 
-You can then train the model by executing: \
-`python main.py train "./data" -n`
+#### You can then train the model by executing:
+`python main.py train "path to training data" "experiment name" "config.json"` \
+In case the training crashes and you want to resume from the last checkpoint, use the `-r` flag. If you want to continue training, make sure to fully specify the experiment name (including the timestamp!).
 
-To see a list of all available commands type: \
+#### You can then run the model on some test data by executing:
+`python main.py run "path to test data" "experiment name"` \
+Make sure to fully specify the experiment name (including the timestamp!).
+
+#### You can then generate a submission by executing:
+`python main.py submission "experiment name"` \
+In case you want to specify a different foreground threshold, use `-t 0.5` for example.\
+Make sure to fully specify the experiment name (including the timestamp!).
+
+#### To get a comprehensive list of all possible configurations: 
+Run `python main.py conf` and look at the generated markdown schema.
+
+#### To see a list of all available commands type:
 `python main.py --help`
 
 ## Image Collection

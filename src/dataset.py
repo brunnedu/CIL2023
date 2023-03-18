@@ -78,3 +78,42 @@ class SatelliteDataset(Dataset):
         img = self.post_transform(img/255)
 
         return img, mask
+
+
+class SatelliteDatasetRun(Dataset):
+    """
+    Dataset for loading satellite images and their names and original size (but without labels)
+    """
+    def __init__(
+            self,
+            data_dir: str = 'data/test',
+            transform: Optional[nn.Module] = RESNET_RESIZE,
+    ):
+        """
+        Parameters
+        ----------
+        data_dir
+            Directory where the original data is located. Has to contain two subdirectories "images" & "groundtruth".
+            Both subdirectories should contain files with matching names.
+        transform
+            A torchvision transform that is applied to every loaded image.
+        """
+        self.data_dir = data_dir
+        self.img_names = os.listdir(os.path.join(self.data_dir, 'images'))
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.img_names)
+
+    def __getitem__(self, idx):
+        img_name = self.img_names[idx]
+        img_path = os.path.join(self.data_dir, 'images', img_name)
+
+        img = torchvision.io.read_image(img_path, mode=ImageReadMode.RGB)/255
+        _,oh,ow = img.shape
+        original_size = (oh,ow)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img_name, original_size, img
