@@ -1,6 +1,11 @@
 ############## CUSTOM ##############
 # Outputs from logger:
-/out/* 
+/out/*
+
+.DS_Store
+.idea/
+
+data/
 
 ####################################
 
@@ -133,11 +138,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-
-# Custom rules
-
-.DS_Store
-.idea/
-
-data/
