@@ -115,7 +115,7 @@ class SatelliteDatasetRun(Dataset):
         img_path = self.img_paths[idx]
 
         img = torchvision.io.read_image(img_path, mode=ImageReadMode.RGB)
-        original_size = (img.shape[1].item(), img.shape[2].item())
+        original_size = (img.shape[1], img.shape[2])
 
         if self.hist_equalization:
             img = F.equalize(img)
