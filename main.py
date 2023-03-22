@@ -48,7 +48,8 @@ def train():
     # initialize objects
     dataset = SatelliteDataset(**config['dataset_kwargs'])
 
-    model = config['model_cls'](backbone=config['backbone_cls'], **config['model_kwargs'])
+    # backbone gets instantiated separately
+    model = config['model_cls'](backbone=config['backbone_cls'](), **config['model_kwargs'])
     optimizer = config['optimizer_cls'](model.parameters(), **config['optimizer_kwargs'])
 
     train_model(
