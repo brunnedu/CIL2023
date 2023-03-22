@@ -8,26 +8,27 @@ from src.transforms import AUG_TRANSFORM
 from torch.optim import Adam
 
 TRAIN_CONFIG = {
+    'experiment_id': 'train_test',  # should be changed for every run
+    'resume_from_checkpoint': False,
     'dataset_kwargs': {
         'data_dir': 'data/training',
-        'add_data_dir': None,
+        'add_data_dir': None,  # specify to use additional data
         'hist_equalization': True,
         'aug_transform': AUG_TRANSFORM,
     },
     'model_cls': UNet,
+    'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
-        'backbone_cls': Resnet18Backbone,
         'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upsample'),
     },
-    'criterion': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
-    'accuracy_fn': BinaryF1Score(alpha=100.0),
     'optimizer_cls': Adam,
     'optimizer_kwargs': {
         'lr': 1e-3,
         'weight_decay': 0,
     },
     'train_model_kwargs': {
-        'experiment_id': 'train_test',
+        'accuracy_fn': BinaryF1Score(alpha=100.0),  # OneMinusLossScore(FocalLoss())
+        'criterion': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
         'val_frac': 0.1,
         'num_epochs': 100,
         'batch_size': 64,
