@@ -1,19 +1,12 @@
 import os
 import click
 import datetime
-import json
 import shutil
 
-from torch.optim import Adam
-
 from src.dataset import SatelliteDataset, SatelliteDatasetRun
-from src.metrics.continuous import *
-from src.models.unet.backbones import *
-from src.models.unet.blocks import *
 from src.models.unet.unet import UNet
 from src.train import train_model
 from src.run import run_model
-from src.factory import *
 
 from src.mask_to_submission_old import masks_to_submission  # TODO: use the 2023 mask_to_submission script once released
 from src.utils import create_logger
