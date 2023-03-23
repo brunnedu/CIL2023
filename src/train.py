@@ -14,8 +14,8 @@ def train_model(
         experiment_id: str,
         model: nn.Module,
         dataset: Dataset,
-        criterion: nn.Module, # loss function: lower is better
-        accuracy_fn: nn.Module, # accuracy function (only for validation): higher is better
+        criterion: nn.Module,  # loss function: lower is better
+        accuracy_fn: nn.Module,  # accuracy function (only for validation): higher is better
         val_frac: float = 0.1,
         optimizer: Optional[Optimizer] = None,
         num_epochs: int = 100,
@@ -214,6 +214,10 @@ class AverageMeter(object):
     """
 
     def __init__(self):
+        self.count = None
+        self.sum = None
+        self.avg = None
+        self.val = None
         self.reset()
 
     def reset(self):
