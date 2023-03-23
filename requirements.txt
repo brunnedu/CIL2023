@@ -2,6 +2,7 @@ numpy
 torch
 torchvision
 Pillow
+albumentations
 
 click
 matplotlib
