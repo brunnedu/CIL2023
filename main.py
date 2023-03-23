@@ -76,21 +76,23 @@ def run(data_dir, experiment_id):
         Additionally, (if make_submission flag is set), the submission.csv will be generated which conforms to the
         format required on the kaggle competition.
     """
-    logger = create_logger(experiment_id)
+    # TODO: implement RUN_CONFIG for doing tests
 
-    with open(f'./out/{experiment_id}/config.json') as json_file:
-        config = json.load(json_file)
-
-    dataset = SatelliteDatasetRun(data_dir)
-    model = build_model(config['model'])
-
-    run_model(
-        experiment_id=experiment_id,
-        model=model,
-        dataset=dataset,
-        log_frequency=10,
-        logger=logger
-    )
+    # logger = create_logger(experiment_id)
+    #
+    # with open(f'./out/{experiment_id}/config.json') as json_file:
+    #     config = json.load(json_file)
+    #
+    # dataset = SatelliteDatasetRun(data_dir)
+    # model = build_model(config['model'])
+    #
+    # run_model(
+    #     experiment_id=experiment_id,
+    #     model=model,
+    #     dataset=dataset,
+    #     log_frequency=10,
+    #     logger=logger
+    # )
 
 
 # Make sure to execute run first!
@@ -139,19 +141,6 @@ def evaluate(ground_truth_dir, predicted_dir):
     # Execute
 
     # Generate Statistics
-
-
-@cli.command()
-def conf():
-    """
-        Gives all the configuration options
-    """
-
-    schema = complete_injector().hierarchical_schema()
-    print(schema)
-
-    with open('CONFIG_SCHEMA.md', 'w') as f:
-        f.write(schema)
 
 
 if __name__ == '__main__':
