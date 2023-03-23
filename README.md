@@ -28,9 +28,6 @@ Make sure to fully specify the `experiment_id` (including the timestamp!).
 In case you want to specify a different foreground threshold, use `-t 0.5` for example.\
 Make sure to fully specify the experiment name (including the timestamp!).
 
-#### To get a comprehensive list of all possible configurations: 
-Run `python main.py conf` and look at the generated markdown schema.
-
 #### To see a list of all available commands type:
 `python main.py --help`
 
