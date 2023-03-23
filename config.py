@@ -19,7 +19,7 @@ TRAIN_CONFIG = {
     'model_cls': UNet,
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
-        'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upsample'),
+        'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconvgs'),
     },
     'optimizer_cls': Adam,
     'optimizer_kwargs': {
