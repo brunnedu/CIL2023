@@ -1,6 +1,12 @@
 # CIL Road Segmentation Project
 This repository contains the code of our group project for the Computational Intelligence Lab (SS23 ETH Zürich).
 
+### Team Members:
+* Dustin Brunner
+* Michael Ungersböck
+* Siusing Yip
+* Yanick Zengaffinen
+
 ## Setup
 We recommend using the conda package manager. Navigate to the CIL2023 folder and run:\
 `conda create --name cil python=3.8`\
@@ -8,17 +14,17 @@ We recommend using the conda package manager. Navigate to the CIL2023 folder and
 `pip install -r requirements.txt`
 
 #### Training:
-1. specify your train configuration in the TRAIN_CONFIG dictionary in config.py
-2. execute `python main.py train` in the command line while being in the root directory of the project.
+1. Specify your train configuration in the `TRAIN_CONFIG` dictionary in `config.py`
+2. Execute `python main.py train` in the command line.
 
-In case the training crashes: Set resume_from_checkpoint to True and specify the full experiment_id (including the auto-appended timestamp!) of the training run you want to continue in TRAIN_CONFIG.
+In case the training crashes: Set `resume_from_checkpoint` to `True` in the `TRAIN_CONFIG` and specify the full `experiment_id` (including the timestamp!) of the training run you want to continue.
 
 #### Testing:
-`python main.py run "path to test data" "experiment name"` \
-Make sure to fully specify the experiment name (including the timestamp!).
+Execute `python main.py run "path/to/test_data" "experiment_id"` in the command line.\
+Make sure to fully specify the `experiment_id` (including the timestamp!).
 
 #### Submission Generation:
-`python main.py submission "experiment name"` \
+`python main.py submission "experiment_id"` \
 In case you want to specify a different foreground threshold, use `-t 0.5` for example.\
 Make sure to fully specify the experiment name (including the timestamp!).
 
