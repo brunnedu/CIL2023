@@ -51,7 +51,7 @@ class SatelliteDataset(Dataset):
         if self.add_data_dir:
             # add additional data
             add_img_paths = [os.path.join(self.add_data_dir, 'images', f) for f in os.listdir(os.path.join(self.add_data_dir, 'images'))]
-            add_mask_paths = [os.path.join(self.data_dir, 'groundtruth', os.path.split(p)[-1]) for p in add_img_paths]
+            add_mask_paths = [os.path.join(self.add_data_dir, 'groundtruth', os.path.split(p)[-1]) for p in add_img_paths]
             self.img_paths += add_img_paths
             self.mask_paths += add_mask_paths
 
