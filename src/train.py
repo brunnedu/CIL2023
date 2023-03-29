@@ -1,13 +1,67 @@
 import logging
+import os
 import time
-from typing import Optional
+import typing as t
 
 import torch
 from torch import nn
 from torch.optim import Optimizer
 from torch.utils.data import Dataset, DataLoader, random_split
 
+import pytorch_lightning as pl
+from lightning.pytorch.loggers import TensorBoardLogger
+
 from src.utils import fix_all_seeds, create_logger, load_checkpoint, save_model, save_checkpoint, save_plotting_data
+
+
+def train_pl_wrapper(
+        experiment_id: str,
+        dataset: Dataset,
+        pl_wrapper: pl.LightningModule,
+        val_frac: float = 0.1,
+        batch_size: int = 64,
+        num_workers_ds: int = 4,
+        pl_trainer_kwargs: t.Optional[t.Dict[str, t.Any]] = None,
+        save_checkpoints: bool = True,
+        seed: int = 0,
+) -> None:
+    """
+    Training loop.
+    """
+    # TODO: enable resume_from_checkpoint functionality
+
+    # set seed for reproducibility
+    pl.seed_everything(seed, workers=True)
+
+    # initialize logger
+    logger = TensorBoardLogger("tb_logs/", name=experiment_id)
+
+    # train-val split
+    ds_train, ds_val = random_split(dataset, [1 - val_frac, val_frac], generator=torch.Generator().manual_seed(seed))
+
+    # create dataloaders
+    train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=num_workers_ds)
+    val_loader = DataLoader(ds_val, batch_size=batch_size, shuffle=False, num_workers=num_workers_ds)
+
+    # define pytorch lightning callbacks
+    pl_trainer_callbacks = []
+
+    if save_checkpoints:
+        # save best model so far
+        pl_trainer_callbacks.append(
+            pl.callbacks.ModelCheckpoint(
+                dirpath=os.path.join('out', experiment_id),
+                filename='model-{epoch:02d}-{val_acc:.2f}',
+                monitor='val_acc',
+                mode='max',
+                save_top_k=1,
+                save_last=True,
+            )
+        )
+
+    trainer = pl.Trainer(logger=logger, callbacks=pl_trainer_callbacks, **pl_trainer_kwargs)
+
+    trainer.fit(pl_wrapper, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
 
 def train_model(
@@ -17,7 +71,7 @@ def train_model(
         criterion: nn.Module,  # loss function: lower is better
         accuracy_fn: nn.Module,  # accuracy function (only for validation): higher is better
         val_frac: float = 0.1,
-        optimizer: Optional[Optimizer] = None,
+        optimizer: t.Optional[Optimizer] = None,
         num_epochs: int = 100,
         batch_size: int = 64,
         num_workers: int = 4,
@@ -27,7 +81,7 @@ def train_model(
         seed: int = 0,
         logger: logging.Logger = None,
         save_models: bool = True,
-        device: Optional[str] = None,
+        device: t.Optional[str] = None,
 ) -> float:
     """
     Training loop.
