@@ -50,7 +50,6 @@ class PLWrapper(pl.LightningModule):
         self.lr_scheduler_kwargs = lr_scheduler_kwargs
         self.loss_fn = loss_fn
 
-        # TODO: use the correct accuracy_fn
         # accuracy metric is necessary as it is needed for early stopping and checkpointing
         if 'acc' not in val_metrics:
             raise ValueError("The val_metrics must contain the key 'acc'."
