@@ -10,8 +10,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 
 import pytorch_lightning as pl
 
-from src.utils import fix_all_seeds, create_logger, load_checkpoint, save_model, save_checkpoint, save_plotting_data, \
-    TextLogger
+from src.utils import fix_all_seeds, create_logger, load_checkpoint, save_model, save_checkpoint, save_plotting_data
 
 
 def train_pl_wrapper(
