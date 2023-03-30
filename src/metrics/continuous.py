@@ -93,3 +93,25 @@ class FocalLoss(nn.Module):
             loss = alpha_t * loss
 
         return loss.mean()
+
+
+class PatchAccuracy(torch.nn.Module):
+    """
+    Evaluation metric used by kaggle.
+    1. Splits the prediction and target into patches of size patch_size.
+    2. Binarizes every patch by comparing the mean of the patch activations to the cutoff value.
+    3. Computes the accuracy over the binarized patches.
+    """
+    def __init__(self, patch_size: int = 16, cutoff: float = 0.25):
+        super(PatchAccuracy, self).__init__()
+        self.patch_size = patch_size
+        self.cutoff = cutoff
+
+    def forward(self, y_hat, y):
+
+        h_patches = y.shape[-2] // self.patch_size
+        w_patches = y.shape[-1] // self.patch_size
+        patches_hat = y_hat.reshape(-1, 1, h_patches, self.patch_size, w_patches, self.patch_size).mean((-1, -3)) > self.cutoff
+        patches = y.reshape(-1, 1, h_patches, self.patch_size, w_patches, self.patch_size).mean((-1, -3)) > self.cutoff
+
+        return (patches == patches_hat).float().mean()
