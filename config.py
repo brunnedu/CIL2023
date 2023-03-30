@@ -9,7 +9,7 @@ TRAIN_CONFIG = {
     'resume_from_checkpoint': False,  # currently not working with pytorch lightning
     'dataset_kwargs': {
         'data_dir': 'data/training',
-        'add_data_dir': 'data/data_2022',  # specify to use additional data
+        'add_data_dir': None,  # specify to use additional data
         'hist_equalization': False,
         'aug_transform': AUG_TRANSFORM,
     },
@@ -38,10 +38,10 @@ TRAIN_CONFIG = {
         'max_epochs': 10,
         'log_every_n_steps': 50,
     },
-    'train_pl_wrapper': {
+    'train_pl_wrapper_kwargs': {
         'val_frac': 0.1,
         'batch_size': 64,
-        'num_workers': 4,  # set to 0 if multiprocessing leads to issues
+        'num_workers_dl': 4,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
         'save_checkpoints': True,
     }

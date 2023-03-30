@@ -9,9 +9,9 @@ from torch.optim import Optimizer
 from torch.utils.data import Dataset, DataLoader, random_split
 
 import pytorch_lightning as pl
-from lightning.pytorch.loggers import TensorBoardLogger
 
-from src.utils import fix_all_seeds, create_logger, load_checkpoint, save_model, save_checkpoint, save_plotting_data
+from src.utils import fix_all_seeds, create_logger, load_checkpoint, save_model, save_checkpoint, save_plotting_data, \
+    TextLogger
 
 
 def train_pl_wrapper(
@@ -20,28 +20,30 @@ def train_pl_wrapper(
         pl_wrapper: pl.LightningModule,
         val_frac: float = 0.1,
         batch_size: int = 64,
-        num_workers_ds: int = 4,
+        num_workers_dl: int = 4,
         pl_trainer_kwargs: t.Optional[t.Dict[str, t.Any]] = None,
         save_checkpoints: bool = True,
         seed: int = 0,
 ) -> None:
     """
-    Training loop.
+    Train the pytorch lightning wrapper.
+    Train loop is completely handled by pytorch lightning.
     """
     # TODO: enable resume_from_checkpoint functionality
 
     # set seed for reproducibility
     pl.seed_everything(seed, workers=True)
 
-    # initialize logger
-    logger = TensorBoardLogger("tb_logs/", name=experiment_id)
+    # initialize loggers
+    tb_logger = pl.loggers.TensorBoardLogger("tb_logs/", name=experiment_id)
+    tb_logger.experiment.add_text('experiment_id', experiment_id)
 
     # train-val split
     ds_train, ds_val = random_split(dataset, [1 - val_frac, val_frac], generator=torch.Generator().manual_seed(seed))
 
     # create dataloaders
-    train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=num_workers_ds)
-    val_loader = DataLoader(ds_val, batch_size=batch_size, shuffle=False, num_workers=num_workers_ds)
+    train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=num_workers_dl)
+    val_loader = DataLoader(ds_val, batch_size=batch_size, shuffle=False, num_workers=num_workers_dl)
 
     # define pytorch lightning callbacks
     pl_trainer_callbacks = []
@@ -59,7 +61,7 @@ def train_pl_wrapper(
             )
         )
 
-    trainer = pl.Trainer(logger=logger, callbacks=pl_trainer_callbacks, **pl_trainer_kwargs)
+    trainer = pl.Trainer(logger=tb_logger, callbacks=pl_trainer_callbacks, **pl_trainer_kwargs)
 
     trainer.fit(pl_wrapper, train_dataloaders=train_loader, val_dataloaders=val_loader)
 

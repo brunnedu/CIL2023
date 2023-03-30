@@ -1,3 +1,5 @@
+import logging
+
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
@@ -18,6 +20,7 @@ class PLWrapper(pl.LightningModule):
             lr_scheduler_cls: t.Optional[torch.optim.lr_scheduler._LRScheduler] = None,
             lr_scheduler_kwargs: t.Optional[t.Dict[str, t.Any]] = None,
             val_metrics: t.Optional[t.Dict[str, t.Callable]] = None,
+            external_logger: t.Optional[logging.Logger] = None,
     ) -> None:
         """
         PyTorch Lightning wrapper for pytorch models.
@@ -47,6 +50,7 @@ class PLWrapper(pl.LightningModule):
         self.lr_scheduler_cls = lr_scheduler_cls
         self.lr_scheduler_kwargs = lr_scheduler_kwargs
         self.loss_fn = loss_fn
+        self.external_logger = external_logger
 
         # TODO: use the correct accuracy_fn
         # accuracy metric is necessary as it is needed for early stopping and checkpointing
@@ -74,7 +78,7 @@ class PLWrapper(pl.LightningModule):
         # log additional metrics next to loss
         for name, metric_fn in self.val_metrics.items():
             metric_value = metric_fn(y_hat, y)
-            self.log(f'val_{name}', metric_value)
+            self.log(f'val_{name}', metric_value, on_epoch=True, on_step=True, logger=True)
 
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
         x = batch

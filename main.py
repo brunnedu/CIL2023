@@ -1,18 +1,22 @@
+import logging
 import os
+import sys
+
 import click
 import datetime
 import shutil
 
 from src.dataset import SatelliteDataset, SatelliteDatasetRun
 from src.models.unet.unet import UNet
-from src.train import train_model
+from src.train import train_model, train_pl_wrapper
 from src.run import run_model
 
 from src.mask_to_submission_old import masks_to_submission  # TODO: use the 2023 mask_to_submission script once released
-from src.utils import create_logger
+from src.utils import create_logger, ensure_dir
 
 # import the train config
 from config import TRAIN_CONFIG
+from src.wrapper import PLWrapper
 
 
 @click.group()
@@ -32,28 +36,30 @@ def train():
     if not config['resume_from_checkpoint']:
         experiment_id = f"{experiment_id}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
 
-    logger = create_logger(experiment_id)
-    logger.info(f'Full Experiment ID: {experiment_id}')
+    # create new directory for experiment and copy config to it
+    experiment_dir = os.path.join("out", experiment_id)
+    ensure_dir(experiment_dir)
+    shutil.copy('config.py', os.path.join('out', experiment_id, 'config.py'))
 
-    # copy current config to experiment folder
-    shutil.copy('config.py', f'./out/{experiment_id}/config.py')
-
-    # initialize objects
+    # initialize dataset
     dataset = SatelliteDataset(**config['dataset_kwargs'])
 
-    # backbone gets instantiated separately
-    model = config['model_cls'](backbone=config['backbone_cls'](), **config['model_kwargs'])
-    optimizer = config['optimizer_cls'](model.parameters(), **config['optimizer_kwargs'])
+    # initialize model
+    model_config = config['model_config']
+    model = model_config['model_cls'](backbone=model_config['backbone_cls'](), **model_config['model_kwargs'])
 
-    train_model(
-        experiment_id=experiment_id,
-        resume_from_checkpoint=config['resume_from_checkpoint'],
-        dataset=dataset,
+    # initialize pytorch lightning wrapper for model
+    pl_wrapper = PLWrapper(
         model=model,
-        optimizer=optimizer,
-        fix_seed=True,
-        logger=logger,
-        **config['train_model_kwargs'],
+        **config['pl_wrapper_kwargs'],
+    )
+
+    train_pl_wrapper(
+        experiment_id=experiment_id,
+        pl_wrapper=pl_wrapper,
+        dataset=dataset,
+        pl_trainer_kwargs=config['pl_trainer_kwargs'],
+        **config['train_pl_wrapper_kwargs'],
     )
 
 

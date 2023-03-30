@@ -8,6 +8,7 @@ from typing import Tuple, Union, List, Dict
 import numpy as np
 import torch
 import torchvision
+from lightning_utilities.core.rank_zero import rank_zero_only
 from torch import nn
 from torch.optim import Optimizer
 from torchvision.transforms import Normalize
@@ -180,3 +181,11 @@ def display_sample(
     # plot
     plt.imshow(overlay)
     plt.show()
+
+
+def ensure_dir(dir_path: str):
+    """
+    Create a directory if it does not exist yet.
+    """
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
