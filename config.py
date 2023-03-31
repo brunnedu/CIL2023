@@ -1,3 +1,5 @@
+import torch
+
 from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy
 from src.transforms import AUG_TRANSFORM
@@ -5,7 +7,7 @@ from src.transforms import AUG_TRANSFORM
 from torch.optim import Adam
 
 TRAIN_CONFIG = {
-    'experiment_id': 'train_test',  # should be changed for every run
+    'experiment_id': 'test_run',  # should be changed for every run
     'resume_from_checkpoint': False,  # currently not working with pytorch lightning
     'dataset_kwargs': {
         'data_dir': 'data/training',
@@ -31,11 +33,16 @@ TRAIN_CONFIG = {
             'lr': 1e-3,
             'weight_decay': 0,
         },
-        'lr_scheduler_cls': None,
-        'lr_scheduler_kwargs': None,
+        'lr_scheduler_cls': torch.optim.lr_scheduler.ReduceLROnPlateau,
+        'lr_scheduler_kwargs': {
+            'monitor': 'val_loss',
+            'mode': 'min',
+            'factor': 0.2,
+            'patience': 10,
+        },
     },
     'pl_trainer_kwargs': {
-        'max_epochs': 10,
+        'max_epochs': 100,
         'log_every_n_steps': 50,
     },
     'train_pl_wrapper_kwargs': {
