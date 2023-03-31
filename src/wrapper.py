@@ -88,12 +88,15 @@ class PLWrapper(pl.LightningModule):
         if self.lr_scheduler_cls is not None:
             lr_scheduler_kwargs = self.lr_scheduler_kwargs
             # some LR schedulers require a metric to "monitor" which must be set separately
-            lr_monitor = lr_scheduler_kwargs.pop("monitor", None)
+            lr_monitor = lr_scheduler_kwargs.pop("monitor", "val_loss")
             lr_scheduler = self.lr_scheduler_cls(optimizer, **lr_scheduler_kwargs)
 
-            return optimizer, {
-                "scheduler": lr_scheduler,
-                "monitor": lr_monitor if lr_monitor is not None else "val_loss",
+            return {
+                'optimizer': optimizer,
+                'lr_scheduler': {
+                    "scheduler": lr_scheduler,
+                    "monitor": lr_monitor if lr_monitor else "val_loss",
+                }
             }
 
         return optimizer
