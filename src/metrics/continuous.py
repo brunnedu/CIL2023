@@ -6,6 +6,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchmetrics.classification
 
 
 class JaccardLoss(nn.Module):
@@ -109,9 +110,35 @@ class PatchAccuracy(torch.nn.Module):
 
     def forward(self, y_hat, y):
 
-        h_patches = y.shape[-2] // self.patch_size
-        w_patches = y.shape[-1] // self.patch_size
-        patches_hat = y_hat.reshape(-1, 1, h_patches, self.patch_size, w_patches, self.patch_size).mean((-1, -3)) > self.cutoff
-        patches = y.reshape(-1, 1, h_patches, self.patch_size, w_patches, self.patch_size).mean((-1, -3)) > self.cutoff
+        patches_hat, patches = self.binarize_patches(y_hat, y)
 
         return (patches == patches_hat).float().mean()
+
+    def binarize_patches(self, y_hat, y):
+
+        h_patches = y.shape[-2] // self.patch_size
+        w_patches = y.shape[-1] // self.patch_size
+        patches_hat = y_hat.reshape(-1, 1, h_patches, self.patch_size, w_patches, self.patch_size).mean(
+            (-1, -3)) > self.cutoff
+        patches = y.reshape(-1, 1, h_patches, self.patch_size, w_patches, self.patch_size).mean((-1, -3)) > self.cutoff
+
+        return patches_hat, patches
+
+
+class PatchF1Score(PatchAccuracy):
+    """
+    Evaluation metric used this year.
+    1. Splits the prediction and target into patches of size patch_size.
+    2. Binarizes every patch by comparing the mean of the patch activations to the cutoff value.
+    3. Computes the F1-Score over the binarized patches.
+    """
+    def __init__(self, patch_size: int = 16, cutoff: float = 0.25):
+        super(PatchF1Score, self).__init__(patch_size=patch_size, cutoff=cutoff)
+
+        self.metric = torchmetrics.classification.F1Score(task='binary')
+
+    def forward(self, y_hat, y):
+
+        patches_hat, patches = self.binarize_patches(y_hat, y)
+
+        return self.metric(patches_hat, patches)
