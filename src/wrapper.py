@@ -86,7 +86,7 @@ class PLWrapper(pl.LightningModule):
         optimizer = self.optimizer_cls(self.model.parameters(), **self.optimizer_kwargs)
 
         if self.lr_scheduler_cls is not None:
-            lr_scheduler_kwargs = self.lr_scheduler_kws
+            lr_scheduler_kwargs = self.lr_scheduler_kwargs
             # some LR schedulers require a metric to "monitor" which must be set separately
             lr_monitor = lr_scheduler_kwargs.pop("monitor", None)
             lr_scheduler = self.lr_scheduler_cls(optimizer, **lr_scheduler_kwargs)
@@ -125,7 +125,7 @@ class PLUNet(pl.LightningModule):
         self.optimizer_cls = optimizer_cls
         self.optimizer_kws = optimizer_kwargs if optimizer_kwargs is not None else {'lr': 1e-3, 'weight_decay': 0}
         self.lr_scheduler_cls = lr_scheduler_cls
-        self.lr_scheduler_kws = lr_scheduler_kwargs
+        self.lr_scheduler_kwargs = lr_scheduler_kwargs
 
         # down nodes / encoder
         self.backbone = backbone
@@ -174,7 +174,7 @@ class PLUNet(pl.LightningModule):
         optimizer = self.optimizer_cls(**self.optimizer_kws)
 
         if self.lr_scheduler_cls is not None:
-            lr_scheduler_kwargs = self.lr_scheduler_kws
+            lr_scheduler_kwargs = self.lr_scheduler_kwargs
             # some LR schedulers require a metric to "monitor" which must be set separately
             lr_monitor = lr_scheduler_kwargs.pop("monitor", None)
             lr_scheduler = self.lr_scheduler_cls(optimizer, **lr_scheduler_kwargs)
