@@ -9,3 +9,6 @@ matplotlib
 opencv-python
 
 absl-py
+
+sklearn
+jupyter
