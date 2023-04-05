@@ -65,8 +65,8 @@ OPTUNA_CONFIG = {
         },
         'optimizer_cls': Adam,
         'optimizer_kwargs': {
-            'lr': 1e-3,
-            'weight_decay': 0,
+            'lr': ('float-log', 1e-5, 1e-3),
+            'weight_decay': ('float-log', 1e-5, 1e-3),
         },
         'lr_scheduler_cls': torch.optim.lr_scheduler.ReduceLROnPlateau,
         'lr_scheduler_kwargs': {
@@ -85,7 +85,7 @@ OPTUNA_CONFIG = {
     },
     'train_pl_wrapper_kwargs': {
         'val_frac': 0.1,
-        'batch_size': 64,
+        'batch_size': ('int-log', 4, 6),
         'num_workers_dl': 4,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
         'save_checkpoints': False,
@@ -122,7 +122,7 @@ def create_optuna_config(optuna_config: dict, trial: optuna.Trial) -> dict:
         for k, v in d.items():
             if isinstance(v, tuple):
                 # sample parameter value
-                d[v] = sample_param_val(trial, k, v)
+                d[k] = sample_param_val(trial, k, v)
             elif isinstance(v, dict):
                 # recurse into dictionary
                 instantiate_dict(v)
