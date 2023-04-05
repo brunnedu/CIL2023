@@ -1,4 +1,5 @@
 import torch
+from pytorch_lightning.callbacks import EarlyStopping
 
 from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy
@@ -44,12 +45,15 @@ TRAIN_CONFIG = {
     'pl_trainer_kwargs': {
         'max_epochs': 100,
         'log_every_n_steps': 50,
+        'callbacks': [  # list of callbacks (callback_cls, callback_kwargs)
+            (EarlyStopping, {'monitor': 'val_acc', 'patience': 10, 'mode': 'max'}),
+        ]
     },
     'train_pl_wrapper_kwargs': {
         'val_frac': 0.1,
         'batch_size': 64,
         'num_workers_dl': 4,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
-        'save_checkpoints': True,
+        'save_checkpoints': True,  # turn off to save storage space
     }
 }
