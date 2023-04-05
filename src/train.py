@@ -23,7 +23,7 @@ def train_pl_wrapper(
         pl_trainer_kwargs: t.Optional[t.Dict[str, t.Any]] = None,
         save_checkpoints: bool = True,
         seed: int = 0,
-) -> None:
+) -> pl.Trainer:
     """
     Train the pytorch lightning wrapper.
     Train loop is completely handled by pytorch lightning.
@@ -44,11 +44,15 @@ def train_pl_wrapper(
     train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=num_workers_dl)
     val_loader = DataLoader(ds_val, batch_size=batch_size, shuffle=False, num_workers=num_workers_dl)
 
-    # define pytorch lightning callbacks
+    # instantiate trainer callbacks
     pl_trainer_callbacks = []
 
+    for callback in pl_trainer_kwargs.pop('callbacks', []):
+        callback_cls, callback_kwargs = callback
+        pl_trainer_callbacks.append(callback_cls(**callback_kwargs))
+
     if save_checkpoints:
-        # save best model so far
+        # add model checkpoint callback
         pl_trainer_callbacks.append(
             pl.callbacks.ModelCheckpoint(
                 dirpath=os.path.join('out', experiment_id),
@@ -63,6 +67,8 @@ def train_pl_wrapper(
     trainer = pl.Trainer(logger=tb_logger, callbacks=pl_trainer_callbacks, **pl_trainer_kwargs)
 
     trainer.fit(pl_wrapper, train_dataloaders=train_loader, val_dataloaders=val_loader)
+
+    return trainer
 
 
 def train_model(
