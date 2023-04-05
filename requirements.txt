@@ -5,6 +5,7 @@ torchvision
 Pillow
 albumentations
 tensorboard
+optuna
 
 click
 matplotlib
