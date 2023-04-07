@@ -132,13 +132,24 @@ class PatchF1Score(PatchAccuracy):
     2. Binarizes every patch by comparing the mean of the patch activations to the cutoff value.
     3. Computes the F1-Score over the binarized patches.
     """
-    def __init__(self, patch_size: int = 16, cutoff: float = 0.25):
+    def __init__(self, patch_size: int = 16, cutoff: float = 0.25, eps: float = 1e-10):
         super(PatchF1Score, self).__init__(patch_size=patch_size, cutoff=cutoff)
 
-        self.metric = torchmetrics.classification.F1Score(task='binary')
+        # TODO: fix issue with self.metric not being put on device
+        self.eps = eps
 
     def forward(self, y_hat, y):
 
         patches_hat, patches = self.binarize_patches(y_hat, y)
 
-        return self.metric(patches_hat, patches)
+        # Compute true positives, false positives, and false negatives
+        tp = torch.sum((patches_hat == 1) & (patches == 1)).float()
+        fp = torch.sum((patches_hat == 1) & (patches == 0)).float()
+        fn = torch.sum((patches_hat == 0) & (patches == 1)).float()
+
+        # Compute precision, recall, and F1 score
+        precision = tp / (tp + fp + self.eps)
+        recall = tp / (tp + fn + self.eps)
+        f1_score = 2 * precision * recall / (precision + recall + self.eps)
+
+        return f1_score
