@@ -1,6 +1,7 @@
 ############## CUSTOM ##############
 # Outputs from logger:
 /out/*
+tb_logs/
 
 .DS_Store
 .idea/
