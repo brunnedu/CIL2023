@@ -26,7 +26,7 @@ TRAIN_CONFIG = {
         'val_metrics': {
             'acc': PatchAccuracy(patch_size=16, cutoff=0.25),
             'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
-            # 'patchf1score': PatchF1Score(),
+            'patchf1score': PatchF1Score(),
         },
         'optimizer_cls': Adam,
         'optimizer_kwargs': {
