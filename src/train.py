@@ -23,7 +23,6 @@ def train_pl_wrapper(
     Train the pytorch lightning wrapper.
     Train loop is completely handled by pytorch lightning.
     """
-    # TODO: enable resume_from_checkpoint functionality
 
     # set seed for reproducibility
     pl.seed_everything(seed, workers=True)
@@ -63,10 +62,14 @@ def train_pl_wrapper(
         logger=tb_logger,
         callbacks=pl_trainer_callbacks,
         enable_checkpointing=save_checkpoints,
-        resume_from_checkpoint=os.path.join('out', experiment_id, 'checkpoint.ckpt') if resume_from_checkpoint else None,
         **pl_trainer_kwargs
     )
 
-    trainer.fit(pl_wrapper, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    trainer.fit(
+        pl_wrapper,
+        train_dataloaders=train_loader,
+        val_dataloaders=val_loader,
+        ckpt_path=os.path.join('out', experiment_id, 'last.ckpt') if resume_from_checkpoint else None
+    )
 
     return trainer
