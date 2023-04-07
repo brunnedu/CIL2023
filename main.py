@@ -8,7 +8,7 @@ import shutil
 
 from src.dataset import SatelliteDataset, SatelliteDatasetRun
 from src.models.unet.unet import UNet
-from src.train import train_model, train_pl_wrapper
+from src.train import train_pl_wrapper
 from src.run import run_model
 
 from src.mask_to_submission_old import masks_to_submission  # TODO: use the 2023 mask_to_submission script once released
@@ -37,7 +37,7 @@ def train():
         experiment_id = f"{experiment_id}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
 
     # create new directory for experiment and copy config to it
-    experiment_dir = os.path.join("out", experiment_id)
+    experiment_dir = os.path.join('out', experiment_id)
     ensure_dir(experiment_dir)
     shutil.copy('config.py', os.path.join('out', experiment_id, 'config.py'))
 
@@ -59,6 +59,7 @@ def train():
         pl_wrapper=pl_wrapper,
         dataset=dataset,
         pl_trainer_kwargs=config['pl_trainer_kwargs'],
+        resume_from_checkpoint=config['resume_from_checkpoint'],
         **config['train_pl_wrapper_kwargs'],
     )
 
@@ -75,7 +76,7 @@ def run(data_dir, experiment_id):
         Additionally, (if make_submission flag is set), the submission.csv will be generated which conforms to the
         format required on the kaggle competition.
     """
-    # TODO: implement RUN_CONFIG for doing tests
+    # TODO: implement RUN_CONFIG for doing inference
 
     # logger = create_logger(experiment_id)
     #
