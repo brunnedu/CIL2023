@@ -1,91 +1,33 @@
-import copy
 import os
 import pickle
 import datetime
-import warnings
-from typing import Union, Tuple
 
 import optuna
 import torch
 from optuna.pruners import MedianPruner
-from pytorch_lightning import Callback, LightningModule, Trainer
 from pytorch_lightning.callbacks import EarlyStopping
 from torch.optim import Adam
 
 from src.dataset import SatelliteDataset
-from src.metrics import FocalLoss, PatchAccuracy, BinaryF1Score
-from src.models import UNet, Resnet18Backbone, UpBlock
+from src.metrics import FocalLoss, PatchAccuracy, BinaryF1Score, PatchF1Score
+from src.models import UNet, Resnet18Backbone, UNetPP
 from src.train import train_pl_wrapper
 from src.transforms import AUG_TRANSFORM
-from src.utils import ensure_dir
+from src.utils import ensure_dir, up_block_ctor_conv, create_optuna_config, PyTorchLightningPruningCallback
 from src.wrapper import PLWrapper
-
-
-class PyTorchLightningPruningCallback(Callback):
-    """PyTorch Lightning callback to prune unpromising trials.
-    See `the example <https://github.com/optuna/optuna-examples/blob/
-    main/pytorch/pytorch_lightning_simple.py>`__
-    if you want to add a pruning callback which observes accuracy.
-    Args:
-        trial:
-            A :class:`~optuna.trial.Trial` corresponding to the current evaluation of the
-            objective function.
-        monitor:
-            An evaluation metric for pruning, e.g., ``val_loss`` or
-            ``val_acc``. The metrics are obtained from the returned dictionaries from e.g.
-            ``pytorch_lightning.LightningModule.training_step`` or
-            ``pytorch_lightning.LightningModule.validation_epoch_end`` and the names thus depend on
-            how this dictionary is formatted.
-    """
-
-    def __init__(self, trial: optuna.trial.Trial, monitor: str) -> None:
-        super().__init__()
-
-        self._trial = trial
-        self.monitor = monitor
-
-    def on_validation_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
-        # When the trainer calls `on_validation_end` for sanity check,
-        # do not call `trial.report` to avoid calling `trial.report` multiple times
-        # at epoch 0. The related page is
-        # https://github.com/PyTorchLightning/pytorch-lightning/issues/1391.
-        if trainer.sanity_checking:
-            return
-
-        epoch = pl_module.current_epoch
-
-        current_score = trainer.callback_metrics.get(self.monitor)
-        if current_score is None:
-            message = (
-                "The metric '{}' is not in the evaluation logs for pruning. "
-                "Please make sure you set the correct metric name.".format(self.monitor)
-            )
-            warnings.warn(message)
-            return
-
-        self._trial.report(current_score, step=epoch)
-        if self._trial.should_prune():
-            message = "Trial was pruned at epoch {}.".format(epoch)
-            raise optuna.TrialPruned(message)
-
-def up_block_ctor_conv(ci: int):
-    """
-    Workaround because lambda functions aren't serializable with pickle.
-    """
-
-    return UpBlock(ci, up_mode='upsample')
 
 
 OPTUNA_CONFIG = {
     'experiment_id': 'optuna_test_run',  # should be changed for every run
     'optuna': {
-        'pruner_cls': MedianPruner,
+        'pruner_cls': MedianPruner,  # prunes unpromising trials if they perform worse than the median of the previous trials
         'pruner_kwargs': {
             'n_startup_trials': 5,
             'n_warmup_steps': 10,
         },
         'study_kwargs': {
-            'direction': 'maximize',
+            'direction': 'maximize',  # whether to minimize or maximize the objective
+            'monitor': 'val_acc',  # value to optimize
         },
         'optimize_kwargs': {
             'n_trials': 50,
@@ -94,12 +36,12 @@ OPTUNA_CONFIG = {
     },
     'dataset_kwargs': {
         'data_dir': 'data/training',
-        'add_data_dir': None,  # specify to use additional data
+        'add_data_dir': 'data/data_2022',  # specify to use additional data
         'hist_equalization': False,
         'aug_transform': AUG_TRANSFORM,
     },
     'model_config': {
-        'model_cls': UNet,
+        'model_cls': UNetPP,
         'backbone_cls': Resnet18Backbone,
         'model_kwargs': {
             'up_block_ctor': up_block_ctor_conv,
@@ -110,11 +52,12 @@ OPTUNA_CONFIG = {
         'val_metrics': {
             'acc': PatchAccuracy(patch_size=16, cutoff=0.25),  # should always use PatchAccuracy as accuracy function
             'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
+            'patchf1score': PatchF1Score(),
         },
         'optimizer_cls': Adam,
         'optimizer_kwargs': {
-            'lr': ('float-log', 1e-5, 1e-3),
-            'weight_decay': ('float-log', 1e-5, 1e-3),
+            'lr': ('float-log', 1e-4, 1e-2),
+            'weight_decay': ('float-log', 1e-6, 1e-3),
         },
         'lr_scheduler_cls': torch.optim.lr_scheduler.ReduceLROnPlateau,
         'lr_scheduler_kwargs': {
@@ -128,56 +71,16 @@ OPTUNA_CONFIG = {
         'max_epochs': 100,
         'log_every_n_steps': 50,
         'callbacks': [  # list of callbacks (callback_cls, callback_kwargs)
-            (EarlyStopping, {'monitor': 'val_acc', 'patience': 10, 'mode': 'max'}),
         ]
     },
     'train_pl_wrapper_kwargs': {
         'val_frac': 0.1,
         'batch_size': ('int-log', 4, 6),
-        'num_workers_dl': 4,  # set to 0 if multiprocessing leads to issues
+        'num_workers_dl': 2,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
-        'save_checkpoints': False,
+        'save_checkpoints': False,  # saving checkpoints with optuna is not recommended
     }
 }
-
-
-def sample_param_val(trial: optuna.Trial, kwarg: str, val: Tuple[str, float, float]) -> Union[float, int]:
-    """
-    Sample a parameter value from a given value range.
-    """
-    # type, lower bound, upper bound
-    t, lo, hi = val
-
-    if "float" in t:
-        # if t is "float-log" we sample logarithmically
-        return trial.suggest_float(kwarg, lo, hi, log=("log" in t))
-    elif "int" in t:
-        # if t is "int-log" we sample from integer powers of 2
-        suggested_int = trial.suggest_int(kwarg, lo, hi, log=False)
-        return 2 ** suggested_int if "log" in t else suggested_int
-    else:
-        raise ValueError(f"The type of parameter to search over should be 'int' or 'float'. Type provided: {t}")
-
-
-def create_optuna_config(optuna_config: dict, trial: optuna.Trial) -> dict:
-    """
-    Instantiates every parameter to search over in an optuna configuration dictionary.
-    """
-    # create a copy of the config
-    current_optuna_config = copy.deepcopy(optuna_config)
-
-    def instantiate_dict(d):
-        for k, v in d.items():
-            if isinstance(v, tuple):
-                # sample parameter value
-                d[k] = sample_param_val(trial, k, v)
-            elif isinstance(v, dict):
-                # recurse into dictionary
-                instantiate_dict(v)
-
-    instantiate_dict(current_optuna_config)
-
-    return current_optuna_config
 
 
 def objective(trial: optuna.trial.Trial) -> float:
@@ -198,7 +101,7 @@ def objective(trial: optuna.trial.Trial) -> float:
     )
 
     # add pytorch lightning pruning callback
-    config['pl_trainer_kwargs']['callbacks'].append((PyTorchLightningPruningCallback, {'trial': trial, 'monitor': 'val_acc'}))
+    config['pl_trainer_kwargs']['callbacks'].append((PyTorchLightningPruningCallback, {'trial': trial, 'monitor': OPTUNA_CONFIG['optuna']['study_kwargs']['monitor']}))
 
     trainer = train_pl_wrapper(
         experiment_id=experiment_id,
@@ -209,7 +112,7 @@ def objective(trial: optuna.trial.Trial) -> float:
     )
 
     # objective function returns validation accuracy
-    return trainer.callback_metrics["val_acc"].item()
+    return trainer.callback_metrics[OPTUNA_CONFIG['optuna']['study_kwargs']['monitor']].item()
 
 
 if __name__ == "__main__":

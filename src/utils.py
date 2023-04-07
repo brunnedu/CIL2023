@@ -1,3 +1,4 @@
+import copy
 import csv
 import logging
 import os
@@ -6,25 +7,14 @@ import time
 from typing import Tuple, Union, List, Dict
 
 import numpy as np
+import optuna
 import torch
 import torchvision
-from lightning_utilities.core.rank_zero import rank_zero_only
-from torch import nn
-from torch.optim import Optimizer
+from pytorch_lightning import Callback, LightningModule, Trainer
 from torchvision.transforms import Normalize
 from matplotlib import pyplot as plt
 
-
-def fix_all_seeds(seed: int) -> None:
-    """
-    Fix all the different seeds for reproducibility.
-    """
-    random.seed(seed)
-    np.random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
+from src.models import UpBlock
 
 
 def create_logger(experiment_id: str) -> logging.Logger:
@@ -53,86 +43,6 @@ def create_logger(experiment_id: str) -> logging.Logger:
 
     return logger
 
-
-def save_plotting_data(experiment_id: str, metric: str, epoch: int, metric_val: float):
-    """
-    Save metrics after each epoch in a CSV file (to create plots for our report later).
-    """
-    fn = os.path.join("out", experiment_id, f"{metric}.csv")
-
-    # define header if file does not exist yet
-    if not os.path.isfile(fn):
-        with open(fn, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["epoch", metric])
-
-    # append new data row
-    with open(fn, 'a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([epoch, metric_val])
-
-
-def save_checkpoint(
-    experiment_id: str,
-    next_epoch: int,
-    best_acc: float,
-    model: nn.Module,
-    optimizer: Optimizer,
-    filename: str="checkpoint.pth.tar"
-    ):
-    """
-    Save all the necessary data to resume the training at a later point in time.
-    More details: https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_a_general_checkpoint.html
-    """
-    # checkpoint states
-    d = {
-        "next_epoch": next_epoch,
-        "best_acc": best_acc,
-        "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
-    }
-
-    experiment_dir = os.path.join("out", experiment_id)
-    torch.save(d, os.path.join(experiment_dir, filename))
-
-
-def load_checkpoint(experiment_id: str, model: nn.Module, optimizer: Optimizer) -> Tuple[
-    nn.Module, Optimizer, int, float]:
-    """
-    Load the latest checkpoint and return the updated model and optimizer, the next epoch and best accuracy so far.
-    """
-    # load checkpoint
-    filename = os.path.join("out", experiment_id, "checkpoint.pth.tar")
-    checkpoint = torch.load(filename)
-
-    # restore model and optimizer state
-    model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
-    next_epoch = checkpoint['next_epoch']
-    best_acc = checkpoint['best_acc']
-
-    return model, optimizer, next_epoch, best_acc
-
-
-def save_model(model: nn.Module, experiment_id: str, filename: str):
-    """
-    Save the current model from the current experiment.
-    """
-    experiment_dir = os.path.join("out", experiment_id)
-    torch.save(model.state_dict(), os.path.join(experiment_dir, filename))
-
-def load_model(model: nn.Module, experiment_id: str, filename : str) -> nn.Module:
-    """
-    Loads the model from an experiment
-    """
-    experiment_dir = os.path.join("out", experiment_id)
-    file = torch.load(os.path.join(experiment_dir, filename))
-
-    # restore model
-    model.load_state_dict(file)
-
-    return model
 
 def display_image(
         img: Union[torch.Tensor, List[torch.Tensor]],
@@ -189,3 +99,102 @@ def ensure_dir(dir_path: str):
     """
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
+
+
+################
+# OPTUNA UTILS #
+################
+
+
+class PyTorchLightningPruningCallback(Callback):
+    """PyTorch Lightning callback to prune unpromising trials.
+    See `the example <https://github.com/optuna/optuna-examples/blob/
+    main/pytorch/pytorch_lightning_simple.py>`__
+    if you want to add a pruning callback which observes accuracy.
+    Args:
+        trial:
+            A :class:`~optuna.trial.Trial` corresponding to the current evaluation of the
+            objective function.
+        monitor:
+            An evaluation metric for pruning, e.g., ``val_loss`` or
+            ``val_acc``. The metrics are obtained from the returned dictionaries from e.g.
+            ``pytorch_lightning.LightningModule.training_step`` or
+            ``pytorch_lightning.LightningModule.validation_epoch_end`` and the names thus depend on
+            how this dictionary is formatted.
+    """
+
+    def __init__(self, trial: optuna.trial.Trial, monitor: str) -> None:
+        super().__init__()
+
+        self._trial = trial
+        self.monitor = monitor
+
+    def on_validation_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
+        # When the trainer calls `on_validation_end` for sanity check,
+        # do not call `trial.report` to avoid calling `trial.report` multiple times
+        # at epoch 0. The related page is
+        # https://github.com/PyTorchLightning/pytorch-lightning/issues/1391.
+        if trainer.sanity_checking:
+            return
+
+        epoch = pl_module.current_epoch
+
+        current_score = trainer.callback_metrics.get(self.monitor)
+        if current_score is None:
+            message = (
+                "The metric '{}' is not in the evaluation logs for pruning. "
+                "Please make sure you set the correct metric name.".format(self.monitor)
+            )
+            warnings.warn(message)
+            return
+
+        self._trial.report(current_score, step=epoch)
+        if self._trial.should_prune():
+            message = "Trial was pruned at epoch {}.".format(epoch)
+            raise optuna.TrialPruned(message)
+
+def up_block_ctor_conv(ci: int):
+    """
+    Workaround because lambda functions aren't serializable with pickle.
+    """
+
+    return UpBlock(ci, up_mode='upconv')
+
+def sample_param_val(trial: optuna.Trial, kwarg: str, val: Tuple[str, float, float]) -> Union[float, int]:
+    """
+    Sample a parameter value from a given value range.
+    """
+    # type, lower bound, upper bound
+    t, lo, hi = val
+
+    if "float" in t:
+        # if t is "float-log" we sample logarithmically
+        return trial.suggest_float(kwarg, lo, hi, log=("log" in t))
+    elif "int" in t:
+        # if t is "int-log" we sample from integer powers of 2
+        suggested_int = trial.suggest_int(kwarg, lo, hi, log=False)
+        return 2 ** suggested_int if "log" in t else suggested_int
+    else:
+        raise ValueError(f"The type of parameter to search over should be 'int' or 'float'. Type provided: {t}")
+
+
+def create_optuna_config(optuna_config: dict, trial: optuna.Trial) -> dict:
+    """
+    Instantiates every parameter to search over in an optuna configuration dictionary.
+    """
+    # create a copy of the config
+    current_optuna_config = copy.deepcopy(optuna_config)
+
+    def instantiate_dict(d):
+        for k, v in d.items():
+            if isinstance(v, tuple):
+                # sample parameter value
+                d[k] = sample_param_val(trial, k, v)
+            elif isinstance(v, dict):
+                # recurse into dictionary
+                instantiate_dict(v)
+
+    instantiate_dict(current_optuna_config)
+
+    return current_optuna_config
+
