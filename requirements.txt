@@ -1,8 +1,11 @@
 numpy
 torch
+pytorch-lightning
 torchvision
 Pillow
 albumentations
+tensorboard
+optuna
 
 click
 matplotlib

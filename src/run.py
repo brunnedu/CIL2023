@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import torchvision
 
-from src.utils import create_logger, load_model
+from src.utils import create_logger
 
 def run_model(
         experiment_id: str,
@@ -37,7 +37,9 @@ def run_model(
 
     # load best model of experiment
     logger.info(f"Loading best model from ./out/{experiment_id}/best_model.pth.tar")
-    model = load_model(model, experiment_id, 'best_model.pth.tar')
+
+    # TODO: load model using pytorch lightning model.load_from_checkpoint method
+    #model = load_model(model, experiment_id, 'best_model.pth.tar')
 
     model.eval()
 
