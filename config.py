@@ -1,9 +1,10 @@
-from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock
+from src.models import UNet, UNetPP, MAUNet, Resnet18Backbone, UpBlock
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score
 from src.transforms import AUG_TRANSFORM
 
 from torch.optim import Adam
 import torch
+import torch.nn as nn
 
 TRAIN_CONFIG = {
     'experiment_id': 'test_run',  # should be changed for every run
@@ -15,14 +16,16 @@ TRAIN_CONFIG = {
         'aug_transform': AUG_TRANSFORM,
     },
     'model_config': {
-        'model_cls': UNet,
+        #'model_cls': UNet,
+        'model_cls': MAUNet,
         'backbone_cls': Resnet18Backbone,
         'model_kwargs': {
-            'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
+            # 'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
         },
     },
     'pl_wrapper_kwargs': {
-        'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
+        #'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
+        'loss_fn': nn.BCELoss(),
         'val_metrics': {
             'acc': PatchAccuracy(patch_size=16, cutoff=0.25),
             'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
@@ -46,7 +49,8 @@ TRAIN_CONFIG = {
     },
     'train_pl_wrapper_kwargs': {
         'val_frac': 0.1,
-        'batch_size': 32,
+        #'batch_size': 32,
+        'batch_size': 8,
         'num_workers_dl': 2,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
         'save_checkpoints': True,
