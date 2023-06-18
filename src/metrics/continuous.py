@@ -153,3 +153,79 @@ class PatchF1Score(PatchAccuracy):
         f1_score = 2 * precision * recall / (precision + recall + self.eps)
 
         return f1_score
+
+
+
+################################
+### TOPOLOGY PRESERVING LOSS ###
+################################
+
+def soft_erode(img):
+        p1 = -F.max_pool2d(-img, (3,1), (1,1), (1,0))
+        p2 = -F.max_pool2d(-img, (1,3), (1,1), (0,1))
+        return torch.min(p1,p2)
+
+def soft_dilate(img):
+    return F.max_pool2d(img, (3,3), (1,1), (1,1))
+
+def soft_open(img):
+    return soft_dilate(soft_erode(img))
+
+def soft_skeletonize(img, nr_of_iterations: int):
+    img1 = soft_open(img)
+    skel = F.relu(img-img1)
+    for j in range(nr_of_iterations):
+        img = soft_erode(img)
+        img1 = soft_open(img)
+        delta = F.relu(img - img1)
+        skel = skel + F.relu(delta - skel * delta)
+    return skel
+
+class SoftClDice(nn.Module):
+    def __init__(self, nr_of_iterations: int = 50, smooth=1.):
+        super().__init__()
+        self.nr_of_iterations = nr_of_iterations
+        self.epsilon = smooth
+
+    def forward(self, y_true, y_pred):
+        skel_pred = soft_skeletonize(y_pred, self.nr_of_iterations)
+        skel_true = soft_skeletonize(y_true, self.nr_of_iterations)
+        tprec = (torch.sum(torch.multiply(skel_pred, y_true)[:,1:,...]) + self.smooth) / (torch.sum(skel_pred[:,1:,...]) + self.smooth)    
+        tsens = (torch.sum(torch.multiply(skel_true, y_pred)[:,1:,...]) + self.smooth) / (torch.sum(skel_true[:,1:,...]) + self.smooth)
+        cl_dice = 1.0 - 2.0 * (tprec * tsens)/(tprec + tsens)
+        return cl_dice
+
+
+class TopologyPreservingLoss(nn.Module):
+    """ 
+        Loss tries to preserve the connectivity of components
+        Implemented as described here: https://arxiv.org/pdf/2003.07311.pdf
+        Adapted from https://github.com/jocpae/clDice/tree/master
+
+        nr_of_iterations: int = 50, the maximum foreground width / how often min-maxing should be applied
+        weight_cldice: float = 0.5, the weight that will be given to connectivity preserving dice loss (rest will be given to standard dice loss)
+        smooth: float = 0.01, can be used to regularize the cl_loss
+    """
+    def __init__(self, nr_of_iterations=50, weight_cldice=0.5, smooth: float = 1):
+        super().__init__()
+        self.nr_of_iterations = nr_of_iterations
+        self.smooth = smooth
+        self.weight_cldice = weight_cldice
+
+    def soft_dice(self, y_true, y_pred):
+        intersection = torch.sum((y_true * y_pred)[:,1:,...])
+        coeff = (2 * intersection + self.smooth) / (torch.sum(y_true[:,1:,...]) + torch.sum(y_pred[:,1:,...]) + self.smooth)
+        return 1.0 - coeff
+
+    def forward(self, y_true, y_pred):
+        if len(y_true.shape) == 4:
+            y_true = y_true.squeeze(1) # remove channel dim
+            y_pred = y_pred.squeeze(1)
+
+        dice = self.soft_dice(y_true, y_pred)
+        skel_pred = soft_skeletonize(y_pred, self.nr_of_iterations)
+        skel_true = soft_skeletonize(y_true, self.nr_of_iterations)
+        tprec = (torch.sum(torch.multiply(skel_pred, y_true)[:,1:,...]) + self.smooth) / (torch.sum(skel_pred[:,1:,...]) + self.smooth)    
+        tsens = (torch.sum(torch.multiply(skel_true, y_pred)[:,1:,...]) + self.smooth) / (torch.sum(skel_true[:,1:,...]) + self.smooth)    
+        cl_dice = 1.0 - 2.0 * (tprec * tsens) / (tprec + tsens)
+        return (1.0 - self.weight_cldice) * dice + self.weight_cldice * cl_dice
