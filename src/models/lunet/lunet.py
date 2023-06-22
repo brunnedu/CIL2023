@@ -36,10 +36,21 @@ class LUNet(nn.Module):
 
         if net_cls is None:
             # Use default UNet with ResNet18 backbone
-            self.mean_net = UNet(backbone=Resnet18Backbone(),
-                                 up_block_ctor=lambda ci: UpBlock(ci, up_mode=default_unet_up_mode))
-            self.var_net = UNet(backbone=Resnet18Backbone(),
-                                up_block_ctor=lambda ci: UpBlock(ci, up_mode=default_unet_up_mode))
+            # for mean use ConvTranspose without BatchNorm or Sigmoid (don't want to limit mean to [0, 1])
+            self.mean_net = UNet(
+                backbone=Resnet18Backbone(),
+                up_block_ctor=lambda ci: UpBlock(ci, up_mode=default_unet_up_mode),
+                final=nn.LazyConvTranspose2d(1, kernel_size=2, stride=2)
+            )
+            # for var use ReLU activation (don't want negative variance)
+            self.var_net = UNet(
+                backbone=Resnet18Backbone(),
+                up_block_ctor=lambda ci: UpBlock(ci, up_mode=default_unet_up_mode),
+                final=nn.Sequential(
+                    nn.LazyConvTranspose2d(1, kernel_size=2, stride=2),
+                    nn.ReLU()
+                    )
+            )
 
         else:
             self.mean_net = net_cls(**net_kwargs)
@@ -51,10 +62,8 @@ class LUNet(nn.Module):
         """
 
         # Pass input through both modules
-        mean = self.mean_net(x).unsqueeze(1)
-        variance = self.var_net(x).unsqueeze(1)
-
-        print(mean.shape, variance.shape)
+        mean = self.mean_net(x)
+        variance = self.var_net(x)
 
         # Return the expected output
         return mean, variance
