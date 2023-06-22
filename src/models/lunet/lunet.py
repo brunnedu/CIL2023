@@ -42,13 +42,14 @@ class LUNet(nn.Module):
                 up_block_ctor=lambda ci: UpBlock(ci, up_mode=default_unet_up_mode),
                 final=nn.LazyConvTranspose2d(1, kernel_size=2, stride=2)
             )
-            # for var use ReLU activation (don't want negative variance)
+            # for var use Softplus activation (don't want negative variance)
+            # WARNING: Softplus can cause problems on macOS -> set accelerator = 'cpu' in trainer
             self.var_net = UNet(
                 backbone=Resnet18Backbone(),
                 up_block_ctor=lambda ci: UpBlock(ci, up_mode=default_unet_up_mode),
                 final=nn.Sequential(
                     nn.LazyConvTranspose2d(1, kernel_size=2, stride=2),
-                    nn.ReLU()
+                    nn.Softplus(),
                     )
             )
 
