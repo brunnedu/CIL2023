@@ -45,10 +45,30 @@ class LUNet(nn.Module):
             self.mean_net = net_cls(**net_kwargs)
             self.var_net = net_cls(**net_kwargs)
 
-    def forward(self, x):
-        # Pass input through both modules
-        mean = self.mean_net(x)
-        variance = self.var_net(x)
+    def probs(self, x):
+        """
+        Outputs the mean and variance of the gaussian distribution (probabilistic) for every pixel.
+        """
 
-        # Concatenate mean and variance in channels dimension
-        return torch.cat([mean, variance], 1)
+        # Pass input through both modules
+        mean = self.mean_net(x).unsqueeze(1)
+        variance = self.var_net(x).unsqueeze(1)
+
+        print(mean.shape, variance.shape)
+
+        # Return the expected output
+        return mean, variance
+
+    def forward(self, x):
+        """
+        Outputs the expected value of the gaussian distribution for every pixel.
+        """
+
+        # Pass input through both modules
+        mean, variance = self.probs(x)
+
+        # Compute the expected values over the gaussian distribution when using a sigmoid activation function
+        expected_values = (mean / (1 + torch.pi * variance / 8).sqrt()).sigmoid()
+
+        # Return the expected values
+        return expected_values
