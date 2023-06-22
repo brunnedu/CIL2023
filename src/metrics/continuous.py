@@ -171,7 +171,7 @@ class LabelUncertaintyLoss(torch.nn.Module):
         variance = y_pred[:, 1, :, :]
 
         # Compute the adapted logit value
-        adapted_logit = (mean / (1 + torch.pi * variance ** 2 / 8).sqrt()).sigmoid().unsqueeze(1)
+        adapted_logit = (mean / (1 + torch.pi * variance / 8).sqrt()).sigmoid().unsqueeze(1)
 
         # Compute binary cross entropy loss
         loss = F.binary_cross_entropy(adapted_logit, y_true, reduction=self.reduction)
