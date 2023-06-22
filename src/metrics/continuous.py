@@ -153,3 +153,27 @@ class PatchF1Score(PatchAccuracy):
         f1_score = 2 * precision * recall / (precision + recall + self.eps)
 
         return f1_score
+
+
+class LabelUncertaintyLoss(torch.nn.Module):
+    """
+    BCE Loss with label uncertainty.
+    Adapted from `Weakly-Supervised Semantic Segmentation by Learning Label Uncertainty <https://arxiv.org/pdf/2110.05926.pdf>` section 3.2.1
+    """
+    def __init__(self, bce_reduction: str = "mean"):
+        super().__init__()
+        self.reduction = bce_reduction
+
+    def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor):
+
+        # Extract mean and variance channels from y_pred
+        mean = y_pred[:, 0, :, :]
+        variance = y_pred[:, 1, :, :]
+
+        # Compute the adapted logit value
+        adapted_logit = (mean / (1 + torch.pi * variance ** 2 / 8).sqrt()).sigmoid().unsqueeze(1)
+
+        # Compute binary cross entropy loss
+        loss = F.binary_cross_entropy(adapted_logit, y_true, reduction=self.reduction)
+
+        return loss
