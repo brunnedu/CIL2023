@@ -22,7 +22,7 @@ class SatelliteDataset(Dataset):
             self,
             data_dir: str = 'data/training',
             add_data_dir: Optional[str] = None,
-            hist_equalization: bool = True,
+            hist_equalization: bool = False,
             aug_transform: Optional[BaseCompose] = AUG_TRANSFORM,
     ):
         """
@@ -88,7 +88,7 @@ class SatelliteDatasetRun(Dataset):
     def __init__(
             self,
             data_dir: str = 'data/test',
-            hist_equalization: bool = True,
+            hist_equalization: bool = False,
             transform: Optional[nn.Module] = RUN_TRANSFORM,
     ):
         """

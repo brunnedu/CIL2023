@@ -1,10 +1,11 @@
-from src.models import UNet, UNetPP, MAUNet, Resnet18Backbone, UpBlock
+from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock, LUNet, MAUNet
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
+import albumentations as A
 
 from torch.optim import Adam
 import torch
-import torch.nn as nn
+from torch import nn
 
 PREDICT_USING_PATCHES = True
 
@@ -49,28 +50,29 @@ PL_WRAPPER_KWARGS = {
 TRAIN_CONFIG = {
     'experiment_id': 'test_run',  # should be changed for every run
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
-    'dataset_kwargs': {
-        'data_dir': 'data/training',
-        'add_data_dir': 'data/data_2022',  # specify to use additional data
+    'train_dataset_kwargs': {
+        'data_dir': 'data/data1k',  # use our data for training
         'hist_equalization': False,
         'aug_transform': AUG_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else AUG_TRANSFORM,
+    },
+    'val_dataset_kwargs': {
+        'data_dir': 'data/training',  # use original training data for validation
+        'hist_equalization': False,
+        'aug_transform': A.RandomCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224, width=224),
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
     'pl_trainer_kwargs': {
-        'max_epochs': 3,
+        'max_epochs': 100,
         'log_every_n_steps': 1,
     },
     'train_pl_wrapper_kwargs': {
-        'val_frac': 0.1,
-        #'batch_size': 32,
-        'batch_size': 8,
+        'batch_size': 32,
         'num_workers_dl': 2,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
         'save_checkpoints': True,
     }
 }
-
 
 RUN_CONFIG = {
     'experiment_id': 'test_run_2023-06-23_15-34-04',
@@ -81,8 +83,8 @@ RUN_CONFIG = {
     },
     'use_patches': PREDICT_USING_PATCHES,
     'patches_config': {
-        'size': (224,224),
-        'subdivisions': (4,4) # keep in mind original images are 400 x 400
+        'size': (224, 224),
+        'subdivisions': (4, 4)  # keep in mind original images are 400 x 400
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS

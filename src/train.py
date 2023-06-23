@@ -9,9 +9,9 @@ import pytorch_lightning as pl
 
 def train_pl_wrapper(
         experiment_id: str,
-        dataset: Dataset,
+        train_dataset: Dataset,
+        val_dataset: Dataset,
         pl_wrapper: pl.LightningModule,
-        val_frac: float = 0.1,
         batch_size: int = 64,
         num_workers_dl: int = 4,
         pl_trainer_kwargs: t.Optional[t.Dict[str, t.Any]] = None,
@@ -31,12 +31,9 @@ def train_pl_wrapper(
     tb_logger = pl.loggers.TensorBoardLogger("tb_logs/", name=experiment_id)
     tb_logger.experiment.add_text('experiment_id', experiment_id)
 
-    # train-val split
-    ds_train, ds_val = random_split(dataset, [1 - val_frac, val_frac], generator=torch.Generator().manual_seed(seed))
-
     # create dataloaders
-    train_loader = DataLoader(ds_train, batch_size=batch_size, shuffle=True, num_workers=num_workers_dl)
-    val_loader = DataLoader(ds_val, batch_size=batch_size, shuffle=False, num_workers=num_workers_dl)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers_dl)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers_dl)
 
     # instantiate trainer callbacks
     pl_trainer_callbacks = []

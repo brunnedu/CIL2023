@@ -8,12 +8,17 @@ import PIL
 
 from absl import app, flags
 
+
+# CUSTOM CODE
+# just copy experiment id here, output will be saved in out/experiment_id/run/experiment_id.csv
+EXPERIMENT_ID = "unetpp_patches_test_run_2023-06-23_18-39-58"
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-    "submission_filename", "dummy_submission.csv", "The output csv for the submission.")
+    "submission_filename", f"../out/{EXPERIMENT_ID}/run/{EXPERIMENT_ID}.csv", "The output csv for the submission.")
 flags.DEFINE_string(
-    "base_dir", "training/groundtruth", "The directory with the predicted masks.")
+    "base_dir", f"../out/{EXPERIMENT_ID}/run", "The directory with the predicted masks.")
 
 foreground_threshold = 0.25 # percentage of pixels of val 255 required to assign a foreground label to a patch
 
