@@ -1,4 +1,4 @@
-from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock, LUNet
+from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock, LUNet, MAUNet
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 import albumentations as A
@@ -9,13 +9,25 @@ from torch import nn
 
 PREDICT_USING_PATCHES = True
 
-MODEL_CONFIG = {
+UNET_MODEL_CONFIG = {
     'model_cls': UNet,
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
         'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
-    },
+    }
 }
+
+MAUNET_MODEL_CONFIG = {
+    'model_cls': MAUNet,
+    'backbone_cls': Resnet18Backbone,
+    'model_kwargs': {
+        'up_mode': 'upsample',
+        'ag_batch_norm': False, # use batch norm for attention gates (false in paper)
+        'ag_bias_wx': False # use bias for attention gates (false in paper)
+    }
+}
+
+MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
     'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
