@@ -22,7 +22,7 @@ class SatelliteDataset(Dataset):
             self,
             data_dir: str = 'data/training',
             add_data_dir: Optional[str] = None,
-            hist_equalization: bool = True,
+            hist_equalization: bool = False,
             aug_transform: Optional[BaseCompose] = AUG_TRANSFORM,
     ):
         """
@@ -88,7 +88,7 @@ class SatelliteDatasetRun(Dataset):
     def __init__(
             self,
             data_dir: str = 'data/test',
-            hist_equalization: bool = True,
+            hist_equalization: bool = False,
             transform: Optional[nn.Module] = RUN_TRANSFORM,
     ):
         """
@@ -102,7 +102,8 @@ class SatelliteDatasetRun(Dataset):
             A torchvision transform that is applied to the satellite images right after loading them.
         """
         self.data_dir = data_dir
-        self.img_paths = [os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images'))]
+        self.img_dir = os.path.join(self.data_dir, 'images')
+        self.img_paths = list(os.listdir(self.img_dir))
 
         self.hist_equalization = hist_equalization
         self.transform = transform
@@ -112,7 +113,8 @@ class SatelliteDatasetRun(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img_path = self.img_paths[idx]
+        img_name = self.img_paths[idx]
+        img_path = os.path.join(self.img_dir, img_name)
 
         img = torchvision.io.read_image(img_path, mode=ImageReadMode.RGB)
         original_size = (img.shape[1], img.shape[2])
@@ -125,4 +127,4 @@ class SatelliteDatasetRun(Dataset):
 
         img = self.post_transform(img/255)
 
-        return img_path, original_size, img
+        return img_name, original_size, img
