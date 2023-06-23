@@ -8,13 +8,23 @@ import torch.nn as nn
 
 PREDICT_USING_PATCHES = True
 
-MODEL_CONFIG = {
+UNET_MODEL_CONFIG = {
     'model_cls': UNet,
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
         'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
-    },
+    }
 }
+
+MAUNET_MODEL_CONFIG = {
+    'model_cls': MAUNet,
+    'backbone_cls': Resnet18Backbone,
+    'model_kwargs': {
+
+    }
+}
+
+MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
     'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
