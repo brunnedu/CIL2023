@@ -2,6 +2,8 @@
 # Outputs from logger:
 /out/*
 tb_logs/
+euler_logs/
+cluster_runs/*
 
 .DS_Store
 .idea/
