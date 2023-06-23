@@ -24,8 +24,7 @@ TRAIN_CONFIG = {
         },
     },
     'pl_wrapper_kwargs': {
-        #'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
-        'loss_fn': nn.BCELoss(),
+        'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
         'val_metrics': {
             'acc': PatchAccuracy(patch_size=16, cutoff=0.25),
             'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired

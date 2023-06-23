@@ -54,7 +54,7 @@ class MAUNet(nn.Module):
         ca = self.channel_attention(x)
         sa = self.spatial_attention(x)
 
-        x = torch.sum(torch.cat([ca, sa], dim=1), 1).unsqueeze(1) # sum fusion = sum over all channels
+        x = torch.mean(torch.cat([ca, sa], dim=1), 1).unsqueeze(1) # sum fusion = sum over all channels
         
         # reduce to input size
         x = F.interpolate(x, (H,W), mode='bilinear').reshape(B, 1, H, W)
