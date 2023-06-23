@@ -11,7 +11,7 @@ from src.models.unet.unet import UNet
 from src.train import train_pl_wrapper
 from src.run import run_pl_wrapper
 
-from src.mask_to_submission_old import masks_to_submission  # TODO: use the 2023 mask_to_submission script once released
+from src.mask_to_submission import masks_to_submission
 from src.utils import create_logger, ensure_dir
 
 # import the train config
