@@ -1,10 +1,11 @@
-from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock
+from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock, LUNet
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 import albumentations as A
 
 from torch.optim import Adam
 import torch
+from torch import nn
 
 PREDICT_USING_PATCHES = True
 
