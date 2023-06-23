@@ -29,7 +29,7 @@ def patch_to_label(patch, foreground_threshold):
 
 def mask_to_submission_strings(image_filename, mask_dir=None, foreground_threshold=0.5):
     """Reads a single image and outputs the strings that should go into the submission file"""
-    img_number = int(re.search(r"\d+", image_filename).group(0))
+    img_number = int(re.search(r"\d+", os.path.basename(image_filename)).group(0))
     im = PIL.Image.open(image_filename)
     im_arr = np.asarray(im)
     if len(im_arr.shape) > 2:
@@ -47,7 +47,7 @@ def mask_to_submission_strings(image_filename, mask_dir=None, foreground_thresho
             yield("{:03d}_{}_{},{}".format(img_number, j, i, label))
 
     if mask_dir:
-        save_mask_as_img(mask, os.path.join(mask_dir, "mask_" + image_filename.split("/")[-1]))
+        save_mask_as_img(mask, os.path.join(mask_dir, "mask_" + os.path.basename(image_filename)))
     
 
 def save_mask_as_img(img_arr, mask_filename):

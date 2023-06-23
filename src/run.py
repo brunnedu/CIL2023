@@ -1,12 +1,10 @@
-import logging
 import os
 import typing as t
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-from torchvision.utils import save_image
+import cv2
 
 import pytorch_lightning as pl
 
@@ -96,7 +94,8 @@ def run_pl_wrapper(
             else:
                 output = predict(images, original_sizes[0], pl_wrapper, device)
 
-            save_image(output[0].to('cpu'), os.path.join(out_dir, names[0]))
+            output = output[0].to('cpu').squeeze().numpy() * 255
+            cv2.imwrite(os.path.join(out_dir, names[0]), output)
 
             if i % 10 == 0:
                 print(i)
