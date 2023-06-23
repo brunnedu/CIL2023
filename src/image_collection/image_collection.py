@@ -61,7 +61,7 @@ def process_image(lat: float, lng: float, roadmap=True, zoom=18, size=400) -> Tu
     return image, url.replace(api_key, "GMAPS_API_KEY")
 
 
-def process_location(location, log_file, satellite_path, roadmap_path) -> None:
+def process_location(location, log_file, satellite_path, roadmap_path, starting_index) -> None:
     """
     Processes location according to config file.
 
@@ -69,6 +69,7 @@ def process_location(location, log_file, satellite_path, roadmap_path) -> None:
     :param log_file: log file
     :param satellite_path: output directory for satellite images
     :param roadmap_path :output directory for roadmap images
+    :param starting_index: starting index of collected images
     :return: None
     """
     print(f"Collecting {location['n_images']} image{'s' if location['n_images'] == 1 else 's'} "
@@ -78,7 +79,7 @@ def process_location(location, log_file, satellite_path, roadmap_path) -> None:
         img_satellite, _ = process_image(lat, lng, roadmap=False)
         img_roadmap, roadmap_url = process_image(lat, lng, roadmap=True)
 
-        filename = f"{location['name']}_satimage_{i}.png"
+        filename = f"{location['name']}_satimage_{i+starting_index}.png"
         img_satellite.save(os.path.join(satellite_path, filename))
         img_roadmap.save(os.path.join(roadmap_path, filename))
         log_file.write(f"{location['name']},{lat},{lng},{filename},{roadmap_url}\n")
@@ -87,7 +88,8 @@ def process_location(location, log_file, satellite_path, roadmap_path) -> None:
 @click.command()
 @click.option("--config", "config_path", help="JSON config path", required=True)
 @click.option("--output", "output_path", help="Output directory path", required=True)
-def main(config_path, output_path):
+@click.option("--index", "starting_index", help="Starting index to enumerate images", required=False, default=0)
+def main(config_path, output_path, starting_index):
     """
     Collects additional training data from Google Maps.
     Requires a Google Maps API Key in the environment variable 'GMAPS_API_KEY'.
@@ -111,7 +113,7 @@ def main(config_path, output_path):
             log_path = os.path.join(output_path, datetime.now().strftime("logs_%Y%m%d%H%M%S"))
             with open(log_path, "w") as log_file:
                 for location in config:
-                    process_location(location, log_file, satellite_path, roadmap_path)
+                    process_location(location, log_file, satellite_path, roadmap_path, starting_index)
         except Exception as e:
             print(e)
 
