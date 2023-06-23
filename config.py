@@ -1,9 +1,11 @@
 from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score
-from src.transforms import AUG_TRANSFORM, RUN_TRANSFORM
+from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 
 from torch.optim import Adam
 import torch
+
+PREDICT_USING_PATCHES = True
 
 MODEL_CONFIG = {
     'model_cls': UNet,
@@ -40,7 +42,7 @@ TRAIN_CONFIG = {
         'data_dir': 'data/training',
         'add_data_dir': 'data/data_2022',  # specify to use additional data
         'hist_equalization': False,
-        'aug_transform': AUG_TRANSFORM,
+        'aug_transform': AUG_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else AUG_TRANSFORM,
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
@@ -63,7 +65,12 @@ RUN_CONFIG = {
     'dataset_kwargs': {
         'data_dir': 'data/test',
         'hist_equalization': False,
-        'transform': RUN_TRANSFORM,
+        'transform': RUN_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else RUN_TRANSFORM,
+    },
+    'use_patches': PREDICT_USING_PATCHES,
+    'patches_config': {
+        'size': (224,224),
+        'subdivisions': (4,4) # keep in mind original images are 400 x 400
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS

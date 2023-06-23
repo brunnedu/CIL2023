@@ -91,7 +91,8 @@ def run():
     run_pl_wrapper(
         experiment_id=experiment_id,
         pl_wrapper=pl_wrapper,
-        dataset=dataset
+        dataset=dataset,
+        patches_config=config['patches_config'] if config['use_patches'] else None
     )
 
 
