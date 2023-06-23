@@ -7,41 +7,35 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import torchvision
+from torchvision.utils import save_image
 
-from src.utils import create_logger
+import pytorch_lightning as pl
 
-def run_model(
-        experiment_id: str,
-        model: nn.Module,
-        dataset: Dataset,
-        log_frequency: int = 10,
-        logger: logging.Logger = None,
-        device: t.Optional[str] = None,
+from src.wrapper import PLWrapper
+
+def run_pl_wrapper(
+    experiment_id: str,
+    dataset: Dataset,
+    pl_wrapper: pl.LightningModule
 ) -> float:
     """
     Run the model on every element of a dataset, upscale to the original size and then save the resulting image
     """
 
-    # create logger with file and console stream handlers
-    if logger is None:
-        logger = create_logger(experiment_id)
-
-    if device is None:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     # create data loader
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False) # batch_size must be 1!
+    tb_logger = pl.loggers.TensorBoardLogger("tb_logs/", name=experiment_id)
+    tb_logger.experiment.add_text('experiment_id', experiment_id)
 
-    # move model to GPU if available
-    model = model.to(device)
+    experiment_dir = os.path.join('out', experiment_id)
+    checkpoint_file = [f for f in os.listdir(experiment_dir) if 'model-epoch=' in f][0]
+    print(f'Loading {checkpoint_file}')
 
-    # load best model of experiment
-    logger.info(f"Loading best model from ./out/{experiment_id}/best_model.pth.tar")
-
-    # TODO: load model using pytorch lightning model.load_from_checkpoint method
-    #model = load_model(model, experiment_id, 'best_model.pth.tar')
-
-    model.eval()
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # TODO: make this work with pl load_from_checkpoint (issue: plwrapper has module as hyperparameter)
+    pl_wrapper.load_state_dict(torch.load(os.path.join(experiment_dir, checkpoint_file))['state_dict'], device)
+    pl_wrapper = pl_wrapper.to(device)
+    pl_wrapper = pl_wrapper.eval()
 
     out_dir = f'./out/{experiment_id}/run'
     os.makedirs(out_dir, exist_ok=True)
@@ -50,14 +44,11 @@ def run_model(
         for i, (names,original_sizes,inputs) in enumerate(dataloader):
             name = names[0]
             size = original_sizes[0]
-            outputs = model(inputs.to(device))
+            outputs = pl_wrapper(inputs.to(device))
             outputs = F.interpolate(outputs, size, mode='bilinear')
             output = outputs[0].to('cpu')
-            output = output * 255
-            output = output.type(torch.ByteTensor)
 
-            torchvision.io.write_png(output, os.path.join(out_dir, name))
+            save_image(output, os.path.join(out_dir, name))
 
-            # log after every `log_frequency` batches
-            if i % log_frequency == 0 or i == len(dataloader) - 1:
-                logger.info(f'Run {i}/{len(dataloader) - 1}')
+            if i % 10 == 0:
+                print(i)
