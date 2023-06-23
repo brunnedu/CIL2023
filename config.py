@@ -30,7 +30,7 @@ MAUNET_MODEL_CONFIG = {
 MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
-    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
+    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'), # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
     'val_metrics': {
         'acc': PatchAccuracy(patch_size=16, cutoff=0.25),
         'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
