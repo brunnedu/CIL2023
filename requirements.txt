@@ -15,3 +15,5 @@ absl-py
 
 sklearn
 jupyter
+
+tqdm
