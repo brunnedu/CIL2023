@@ -1,14 +1,14 @@
-from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock
+from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock, DinkNet34
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 
 from torch.optim import Adam
 import torch
 
-PREDICT_USING_PATCHES = True
+PREDICT_USING_PATCHES = False
 
 MODEL_CONFIG = {
-    'model_cls': UNet,
+    'model_cls': DinkNet34,
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
         'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
@@ -36,18 +36,18 @@ PL_WRAPPER_KWARGS = {
 }
 
 TRAIN_CONFIG = {
-    'experiment_id': 'test_run',  # should be changed for every run
+    'experiment_id': 'dinknet_e100_d1k_no_patches',  # should be changed for every run
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
     'dataset_kwargs': {
         'data_dir': 'data/training',
-        'add_data_dir': 'data/data_2022',  # specify to use additional data
+        'add_data_dir': 'data/data_1k',  # specify to use additional data
         'hist_equalization': False,
         'aug_transform': AUG_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else AUG_TRANSFORM,
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
     'pl_trainer_kwargs': {
-        'max_epochs': 3,
+        'max_epochs': 100,
         'log_every_n_steps': 1,
     },
     'train_pl_wrapper_kwargs': {
@@ -61,7 +61,7 @@ TRAIN_CONFIG = {
 
 
 RUN_CONFIG = {
-    'experiment_id': 'test_run_2023-06-23_15-34-04',
+    'experiment_id': 'dinknet_e100_d1k_no_patches_2023-06-23_21-22-46',
     'dataset_kwargs': {
         'data_dir': 'data/test',
         'hist_equalization': False,
