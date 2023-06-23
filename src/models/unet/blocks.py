@@ -83,13 +83,14 @@ class AttentionGateUpBlock(nn.Module):
         up_mode: 
             - upconv: use ConvTranspose2d to scale up image
             - upsample: use bilinear interpolation to scale up image
+        ag_... see documentation of LazyAttentionGate2D
 
         Usually b is from one level below and 
         - UNet++: s are all outputs from the same level
         - UNet: s is previous output wrapped in a list
     '''
 
-    def __init__(self, nr_channels : int, up_mode : str = 'upconv'):
+    def __init__(self, nr_channels : int, up_mode : str = 'upconv', ag_batch_norm: bool = False, ag_bias_wx: bool = False):
         super().__init__()
 
         if up_mode == 'upconv':
@@ -97,7 +98,7 @@ class AttentionGateUpBlock(nn.Module):
         elif up_mode == 'upsample':
             self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
 
-        self.ag = LazyAttentionGate2D(nr_channels)
+        self.ag = LazyAttentionGate2D(nr_channels, batch_norm=ag_batch_norm, bias_wx=ag_bias_wx)
 
         self.layer = nn.Sequential(
             nn.LazyConv2d(nr_channels, kernel_size=3, padding=1),

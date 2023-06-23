@@ -21,7 +21,9 @@ MAUNET_MODEL_CONFIG = {
     'model_cls': MAUNet,
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
-
+        'up_mode': 'upsample',
+        'ag_batch_norm': False, # use batch norm for attention gates (false in paper)
+        'ag_bias_wx': False # use bias for attention gates (false in paper)
     }
 }
 

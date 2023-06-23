@@ -13,11 +13,14 @@ class MAUNet(nn.Module):
     """ 
         Multiscale Attention UNet architecture based on this paper:
         https://arxiv.org/pdf/2012.10952.pdf
+
+        See the documentation for the AttentionGateUpBlock for further information about the parameters
     """
-    def __init__(self, backbone: ABackbone) -> None:
+    def __init__(self, backbone: ABackbone, up_mode: str='upsample', 
+                 ag_batch_norm: bool = False, ag_bias_wx: bool = False) -> None:
         super().__init__()
 
-        gated_up_block_ctor = lambda nr_channels: AttentionGateUpBlock(nr_channels=nr_channels, up_mode='upsample')
+        gated_up_block_ctor = lambda nr_channels: AttentionGateUpBlock(nr_channels=nr_channels, up_mode=up_mode, ag_batch_norm=ag_batch_norm, ag_bias_wx=ag_bias_wx)
         bottom_ctor = lambda nr_channels: nn.Sequential(
             nn.LazyConv2d(nr_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(nr_channels),
@@ -35,7 +38,6 @@ class MAUNet(nn.Module):
         )
         
         self.channel_attention = ChannelAttention2D()
-        
         self.spatial_attention = SpatialAttention2D(channels=attention_channels) 
 
         self.unet = UNet(
