@@ -42,7 +42,8 @@ def train():
     shutil.copy('config.py', os.path.join('out', experiment_id, 'config.py'))
 
     # initialize dataset
-    dataset = SatelliteDataset(**config['dataset_kwargs'])
+    ds_train = SatelliteDataset(**config['train_dataset_kwargs'])
+    ds_val = SatelliteDataset(**config['val_dataset_kwargs'])
 
     # initialize model
     model_config = config['model_config']
@@ -62,7 +63,8 @@ def train():
     train_pl_wrapper(
         experiment_id=experiment_id,
         pl_wrapper=pl_wrapper,
-        dataset=dataset,
+        train_dataset=ds_train,
+        val_dataset=ds_val,
         pl_trainer_kwargs=config['pl_trainer_kwargs'],
         resume_from_checkpoint=config['resume_from_checkpoint'],
         **config['train_pl_wrapper_kwargs'],
