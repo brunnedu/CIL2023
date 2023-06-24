@@ -4,7 +4,7 @@ import torchvision
 from abc import ABC, abstractmethod
 import typing as t
 
-from torchvision.models import ResNet18_Weights
+from torchvision.models import ResNet18_Weights, ResNet34_Weights, ResNet50_Weights, ResNet101_Weights, ResNet152_Weights
 
 from .blocks import DownBlock
 
@@ -66,15 +66,17 @@ class SimpleBackbone(GenericBackbone):
 
         super().__init__(channels, down_block_ctor)
 
-class Resnet18Backbone(ABackbone):
-    def __init__(self):
+RESNET_CHANNELS_SMALL = [64, 64, 128, 256, 512]
+RESNET_CHANNELS_LARGE = [64, 256, 512, 1024, 2048]
+
+class ResnetBackbone(ABackbone):
+    def __init__(self, resnet, channels):
         super().__init__()
+        self.channels = channels
         
-        resnet = torchvision.models.resnet.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
         children = list(resnet.children())
 
         modules = []
-        
         modules.append(DownBlock( # first 4 resnet layers are a bit special
             nn.Sequential(*children[:3]),
             children[3]
@@ -96,4 +98,24 @@ class Resnet18Backbone(ABackbone):
         return outputs, x
 
     def get_channels(self):
-        return [64, 64, 128, 256, 512] # see Resnet18 architecture
+        return self.channels # see Resnet34- architecture
+
+class Resnet18Backbone(ResnetBackbone):
+    def __init__(self):
+        super().__init__(torchvision.models.resnet.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1), RESNET_CHANNELS_SMALL)
+    
+class Resnet34Backbone(ResnetBackbone):
+    def __init__(self):
+        super().__init__(torchvision.models.resnet.resnet34(weights=ResNet34_Weights.IMAGENET1K_V1), RESNET_CHANNELS_SMALL)
+
+class Resnet50Backbone(ResnetBackbone):
+    def __init__(self):
+        super().__init__(torchvision.models.resnet.resnet50(weights=ResNet50_Weights.IMAGENET1K_V1), RESNET_CHANNELS_LARGE)
+
+class Resnet101Backbone(ResnetBackbone):
+    def __init__(self):
+        super().__init__(torchvision.models.resnet.resnet101(weights=ResNet101_Weights.IMAGENET1K_V1), RESNET_CHANNELS_LARGE)
+
+class Resnet152Backbone(ResnetBackbone):
+    def __init__(self):
+        super().__init__(torchvision.models.resnet.resnet152(weights=ResNet152_Weights.IMAGENET1K_V1), RESNET_CHANNELS_LARGE)
