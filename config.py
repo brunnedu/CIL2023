@@ -60,7 +60,7 @@ TRAIN_CONFIG = {
     'val_dataset_kwargs': {
         'data_dir': 'data/training',  # use original training data for validation
         'hist_equalization': False,
-        'aug_transform': A.RandomCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224, width=224),
+        'aug_transform': A.CenterCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224, width=224),
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
