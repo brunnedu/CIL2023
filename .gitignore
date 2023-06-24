@@ -3,6 +3,7 @@
 /out/*
 tb_logs/
 euler_logs/
+lightning_logs/
 cluster_runs/*
 
 .DS_Store
