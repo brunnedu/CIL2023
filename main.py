@@ -87,7 +87,11 @@ def run():
 
     # initialize model
     model_config = config['model_config']
-    model = model_config['model_cls'](backbone=model_config['backbone_cls'](), **model_config['model_kwargs'])
+    # models with backbone require separate initialization of backbone
+    if 'backbone_cls' in model_config and model_config['backbone_cls'] is not None:
+        model_config['model_kwargs']['backbone'] = model_config['backbone_cls']()
+
+    model = model_config['model_cls'](**model_config['model_kwargs'])
 
     # initialize pytorch lightning wrapper for model
     pl_wrapper = PLWrapper(
@@ -129,9 +133,9 @@ def submission(experiment_id, foreground_threshold):
 
     submission_filename = os.path.join(submission_dir, f'submission{int(foreground_threshold * 100)}.csv')
     masks_to_submission(
-        submission_filename=submission_filename,
-        mask_dir=submission_dir,
-        foreground_threshold=foreground_threshold,
+        submission_filename,
+        submission_dir,
+        foreground_threshold,
         *image_filenames
     )
 
