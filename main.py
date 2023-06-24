@@ -107,7 +107,7 @@ def run():
 @cli.command()
 # Unique ID for this experiment, make sure to use the full name (including the timestamp)
 @click.argument('experiment_id', required=True)
-@click.option('-t', '--foreground_threshold', default=0.5,
+@click.option('-t', '--foreground_threshold', default=0.25,
               help='The foreground threshold that should be used when generating a submission')
 def submission(experiment_id, foreground_threshold):
     """
@@ -129,9 +129,9 @@ def submission(experiment_id, foreground_threshold):
 
     submission_filename = os.path.join(submission_dir, f'submission{int(foreground_threshold * 100)}.csv')
     masks_to_submission(
-        submission_filename,
-        submission_dir,
-        foreground_threshold,
+        submission_filename=submission_filename,
+        mask_dir=submission_dir,
+        foreground_threshold=foreground_threshold,
         *image_filenames
     )
 
