@@ -11,7 +11,7 @@ from absl import app, flags
 
 # CUSTOM CODE
 # just copy experiment id here, output will be saved in out/experiment_id/run/experiment_id.csv
-EXPERIMENT_ID = "unetpp_patches_test_run_2023-06-23_18-39-58"
+EXPERIMENT_ID = "dinknet50_e100_d5k_patches_2023-06-24_16-33-04"
 
 FLAGS = flags.FLAGS
 
