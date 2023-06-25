@@ -1,6 +1,6 @@
-from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock, LUNet, DinkNet
+from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock, LUNet, DLinkNet, Resnet34Backbone
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score
-from src.models.dinknet.blocks import DinkUpBlock
+from src.models.dlinknet.blocks import DLinkUpBlock
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 import albumentations as A
 
@@ -10,10 +10,10 @@ import torch
 PREDICT_USING_PATCHES = False
 
 MODEL_CONFIG = {
-    'model_cls': DinkNet,
-    'backbone_cls': Resnet18Backbone,
+    'model_cls': DLinkNet,
+    'backbone_cls': Resnet34Backbone,
     'model_kwargs': {
-        'up_block_ctor': lambda ci, co: DinkUpBlock(ci, co),
+        'up_block_ctor': lambda ci, co: DLinkUpBlock(ci, co),
     },
 }
 

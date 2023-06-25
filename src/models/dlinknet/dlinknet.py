@@ -2,29 +2,27 @@ import torch.nn as nn
 import typing
 
 from src.models import ABackbone
-from src.models.dinknet.blocks import DinkDilateBlock
+from src.models.dlinknet.blocks import DLinkDilateBlock
 
 
-class DinkNet(nn.Module):
+class DLinkNet(nn.Module):
+    """
+    D-LinkNet adapted from https://github.com/zlckanata/DeepGlobe-Road-Extraction-Challenge/tree/master
+
+    For original LinkNet see https://arxiv.org/pdf/1707.03718.pdf
+    """
 
     def __init__(self, backbone: ABackbone, up_block_ctor: typing.Callable[[int, int], nn.Module]):
-        super(DinkNet, self).__init__()
+        super(DLinkNet, self).__init__()
 
         self.backbone = backbone
         channels = self.backbone.get_channels()
+        self.dblock = DLinkDilateBlock(channels[-1])
 
-        # dilation
-        self.dblock = DinkDilateBlock(channels[-1])
-
-        # up
         ups = []
         for i in range(len(channels)):
             in_channels = channels[i]
-            if i > 0:
-                out_channels = channels[i-1]
-            else:
-                out_channels = channels[i]
-
+            out_channels = channels[i-1] if i > 0 else channels[i]
             layer = up_block_ctor(in_channels, out_channels)
             ups.append(layer)
 
