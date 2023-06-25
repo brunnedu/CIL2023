@@ -50,7 +50,7 @@ def train():
 
     # models with backbone require separate initialization of backbone
     if 'backbone_cls' in model_config and model_config['backbone_cls'] is not None:
-        model_config['model_kwargs']['backbone'] = model_config['backbone_cls']()
+        model_config['model_kwargs']['backbone'] = model_config['backbone_cls'](**model_config.get('backbone_kwargs', {}))
 
     model = model_config['model_cls'](**model_config['model_kwargs'])
 
@@ -70,15 +70,7 @@ def train():
         **config['train_pl_wrapper_kwargs'],
     )
 
-
-@cli.command()
-def run():
-    """
-        Runs a model on all the provided data and saves the output
-
-        Additionally, (if make_submission flag is set), the submission.csv will be generated which conforms to the
-        format required on the kaggle competition.
-    """
+def _run(output_path):
     config = RUN_CONFIG
     experiment_id = config['experiment_id']
 
@@ -89,7 +81,7 @@ def run():
     model_config = config['model_config']
     # models with backbone require separate initialization of backbone
     if 'backbone_cls' in model_config and model_config['backbone_cls'] is not None:
-        model_config['model_kwargs']['backbone'] = model_config['backbone_cls']()
+        model_config['model_kwargs']['backbone'] = model_config['backbone_cls'](**model_config.get('backbone_kwargs', {}))
 
     model = model_config['model_cls'](**model_config['model_kwargs'])
 
@@ -103,8 +95,34 @@ def run():
         experiment_id=experiment_id,
         pl_wrapper=pl_wrapper,
         dataset=dataset,
-        patches_config=config['patches_config'] if config['use_patches'] else None
+        patches_config=config['patches_config'] if config['use_patches'] else None,
+        out_dir=output_path
     )
+
+@cli.command()
+@click.option('-o', '--output_path', default=None,
+              help='Where the outputs should be stored')
+def run(output_path):
+    """
+        Runs a model on all the provided data and saves the output
+    """
+    _run(output_path)
+
+@cli.command()
+def prepare_for_refinement():
+    """
+        Runs the model on all data (including training data) and generates /lowqualitymask for each of the datasets
+    """
+    paths = [
+        'data/training',
+        'data/test',
+        'data/data1k',
+        'data/data5k',
+    ]
+
+    for path in paths:
+        RUN_CONFIG['dataset_kwargs']['data_dir'] = path
+        _run(os.path.join(path, 'lowqualitymask'))
 
 
 # Make sure to execute run first!
