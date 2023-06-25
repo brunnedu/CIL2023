@@ -8,8 +8,7 @@ from src.models.dlinknet.blocks import DLinkDilateBlock
 class DLinkNet(nn.Module):
     """
     D-LinkNet adapted from https://github.com/zlckanata/DeepGlobe-Road-Extraction-Challenge/tree/master
-
-    For original LinkNet see https://arxiv.org/pdf/1707.03718.pdf
+    See also  https://ieeexplore.ieee.org/document/8575492
     """
 
     def __init__(self, backbone: ABackbone, up_block_ctor: typing.Callable[[int, int], nn.Module]):
