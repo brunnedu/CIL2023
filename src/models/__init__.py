@@ -5,3 +5,4 @@ from src.models.unet.backbones import *
 from src.models.unet.blocks import *
 from src.models.lunet.lunet import *
 from src.models.dlinknet.dlinknet import *
+from src.models.dlinknet.blocks import *
