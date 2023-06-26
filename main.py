@@ -50,7 +50,7 @@ def train():
 
     # models with backbone require separate initialization of backbone
     if 'backbone_cls' in model_config and model_config['backbone_cls'] is not None:
-        model_config['model_kwargs']['backbone'] = model_config['backbone_cls']()
+        model_config['model_kwargs']['backbone'] = model_config['backbone_cls'](**model_config.get('backbone_kwargs', {}))
 
     model = model_config['model_cls'](**model_config['model_kwargs'])
 
@@ -72,8 +72,8 @@ def train():
 
 
 @cli.command()
-@click.option('-l', '--use_last_ckpt', is_flag=True, help='Use last checkpoint for inference')
-def run(use_last_ckpt):
+
+def _run(output_path, use_last_ckpt):
     """
         Runs a model on all the provided data and saves the output
 
@@ -90,7 +90,7 @@ def run(use_last_ckpt):
     model_config = config['model_config']
     # models with backbone require separate initialization of backbone
     if 'backbone_cls' in model_config and model_config['backbone_cls'] is not None:
-        model_config['model_kwargs']['backbone'] = model_config['backbone_cls']()
+        model_config['model_kwargs']['backbone'] = model_config['backbone_cls'](**model_config.get('backbone_kwargs', {}))
 
     model = model_config['model_cls'](**model_config['model_kwargs'])
 
@@ -105,8 +105,36 @@ def run(use_last_ckpt):
         pl_wrapper=pl_wrapper,
         dataset=dataset,
         patches_config=config['patches_config'] if config['use_patches'] else None,
+        out_dir=output_path,
         use_last_ckpt=use_last_ckpt,
     )
+
+@cli.command()
+@click.option('-o', '--output_path', default=None,
+              help='Where the outputs should be stored')
+@click.option('-l', '--use_last_ckpt', is_flag=True, 
+              help='Use last checkpoint for inference')
+def run(output_path, use_last_ckpt):
+    """
+        Runs a model on all the provided data and saves the output
+    """
+    _run(output_path, use_last_ckpt)
+
+@cli.command()
+def prepare_for_refinement():
+    """
+        Runs the model on all data (including training data) and generates /lowqualitymask for each of the datasets
+    """
+    paths = [
+        'data/training',
+        'data/test',
+        'data/data1k',
+        'data/data5k',
+    ]
+
+    for path in paths:
+        RUN_CONFIG['dataset_kwargs']['data_dir'] = path
+        _run(os.path.join(path, 'lowqualitymask'))
 
 
 # Make sure to execute run first!

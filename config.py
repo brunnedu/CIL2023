@@ -10,12 +10,17 @@ import torch
 from torch import nn
 
 PREDICT_USING_PATCHES = True
+IS_REFINEMENT = False
 
 UNET_MODEL_CONFIG = {
     'model_cls': UNet,
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
         'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
+    },
+    'backbone_kwargs': {
+        'in_channels': 4 if IS_REFINEMENT else 3,
+        # 'concat_group_channels': True # only for efficientnet backbones
     }
 }
 
@@ -24,8 +29,12 @@ MAUNET_MODEL_CONFIG = {
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
         'up_mode': 'upsample',
-        'ag_batch_norm': False,  # use batch norm for attention gates (false in paper)
-        'ag_bias_wx': False  # use bias for attention gates (false in paper)
+        'ag_batch_norm': False, # use batch norm for attention gates (false in paper)
+        'ag_bias_wx': False # use bias for attention gates (false in paper)
+    },
+    'backbone_kwargs': {
+        'in_channels': 4 if IS_REFINEMENT else 3,
+        # 'concat_group_channels': True # only for efficientnet backbones
     }
 }
 
@@ -35,13 +44,16 @@ DLINKNET_MODEL_CONFIG = {
     'model_kwargs': {
         'up_block_ctor': lambda ci, co: DLinkUpBlock(ci, co),
     },
+    'backbone_kwargs': {
+        'in_channels': 4 if IS_REFINEMENT else 3,
+        # 'concat_group_channels': True # only for efficientnet backbones
+    }
 }
 
 MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
-    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
-    # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
+    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'), # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
     'val_metrics': {
         'acc': PatchF1Score(patch_size=16, cutoff=0.25),
         'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
@@ -67,11 +79,13 @@ TRAIN_CONFIG = {
         'data_dir': 'data/data1k',  # use our data for training
         'hist_equalization': False,
         'aug_transform': AUG_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else AUG_TRANSFORM,
+        'include_low_quality_mask': IS_REFINEMENT
     },
     'val_dataset_kwargs': {
         'data_dir': 'data/training',  # use original training data for validation
         'hist_equalization': False,
         'aug_transform': A.CenterCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224, width=224),
+        'include_low_quality_mask': IS_REFINEMENT
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
@@ -93,6 +107,7 @@ RUN_CONFIG = {
         'data_dir': 'data/test',
         'hist_equalization': False,
         'transform': RUN_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else RUN_TRANSFORM,
+        'include_low_quality_mask': IS_REFINEMENT
     },
     'use_patches': PREDICT_USING_PATCHES,
     'patches_config': {

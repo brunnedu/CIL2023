@@ -60,10 +60,21 @@ def run_pl_wrapper(
         dataset: Dataset,
         pl_wrapper: pl.LightningModule,
         patches_config: t.Optional[t.Dict],
+        out_dir: t.Optional[str] = None,
         use_last_ckpt: bool = False,
 ) -> float:
     """
-    Run the model on every element of a dataset, upscale to the original size and then save the resulting image
+    Run the model on every element of a dataset
+
+    Parameters
+    ----------
+    - experiment_id: the full name experiment id (determines where to load the model from)
+    - dataset: provides the satellite images
+    - pl_wrapper: prototype of the model (will be loaded here)
+    - patches_config: specifies if prediction will be done in patches or all at once
+    - out_dir (optional): where should the generated images be stored? 
+        if not specified, will create a run folder inside the experiment folder
+    - use_last_ckpt: if true, will use the last checkpoint instead of the best one
     """
 
     # create data loader
@@ -93,7 +104,8 @@ def run_pl_wrapper(
     pl_wrapper = pl_wrapper.to(device)
     pl_wrapper = pl_wrapper.eval()
 
-    out_dir = os.path.join(experiment_dir, 'run_last' if use_last_ckpt else 'run')
+    if out_dir is None:
+        out_dir = os.path.join(experiment_dir, 'run_last' if use_last_ckpt else 'run')
     os.makedirs(out_dir, exist_ok=True)
 
     with torch.no_grad():

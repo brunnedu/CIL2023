@@ -80,16 +80,18 @@ RESNET_CHANNELS_LARGE = [64, 256, 512, 1024, 2048]
 
 
 class ResnetBackbone(ABackbone):
-    def __init__(self, resnet, channels):
+    def __init__(self, resnet, channels: t.List[int], in_channels: int = 3):
         super().__init__()
         self.channels = channels
 
         children = list(resnet.children())
 
-        modules = [DownBlock(  # first 4 resnet layers are a bit special
-            nn.Sequential(*children[:3]),
+        modules = []
+        first_conv = children[0] if in_channels == 3 else nn.Conv2d(in_channels, 64, kernel_size=(7,7), stride=(2, 2), padding=(3, 3), bias=False)
+        modules.append(DownBlock( # first 4 resnet layers are a bit special
+            nn.Sequential(first_conv, *children[1:3]),
             children[3]
-        )]
+        ))
 
         for block in children:
             if isinstance(block, nn.Sequential):  # all blocks are of type sequential
@@ -111,28 +113,28 @@ class ResnetBackbone(ABackbone):
 
 
 class Resnet18Backbone(ResnetBackbone):
-    def __init__(self):
-        super().__init__(resnet18(weights=ResNet18_Weights.DEFAULT), RESNET_CHANNELS_SMALL)
+    def __init__(self, in_channels: int = 3):
+        super().__init__(resnet18(weights=ResNet18_Weights.DEFAULT), RESNET_CHANNELS_SMALL, in_channels)
 
 
 class Resnet34Backbone(ResnetBackbone):
-    def __init__(self):
-        super().__init__(resnet34(weights=ResNet34_Weights.DEFAULT), RESNET_CHANNELS_SMALL)
+    def __init__(self, in_channels: int = 3):
+        super().__init__(resnet34(weights=ResNet34_Weights.DEFAULT), RESNET_CHANNELS_SMALL, in_channels)
 
 
 class Resnet50Backbone(ResnetBackbone):
-    def __init__(self):
-        super().__init__(resnet50(weights=ResNet50_Weights.DEFAULT), RESNET_CHANNELS_LARGE)
+    def __init__(self, in_channels: int = 3):
+        super().__init__(resnet50(weights=ResNet50_Weights.DEFAULT), RESNET_CHANNELS_LARGE, in_channels)
 
 
 class Resnet101Backbone(ResnetBackbone):
-    def __init__(self):
-        super().__init__(resnet101(weights=ResNet101_Weights.DEFAULT), RESNET_CHANNELS_LARGE)
+    def __init__(self, in_channels: int = 3):
+        super().__init__(resnet101(weights=ResNet101_Weights.DEFAULT), RESNET_CHANNELS_LARGE, in_channels)
 
 
 class Resnet152Backbone(ResnetBackbone):
-    def __init__(self):
-        super().__init__(resnet152(weights=ResNet152_Weights.DEFAULT), RESNET_CHANNELS_LARGE)
+    def __init__(self, in_channels: int = 3):
+        super().__init__(resnet152(weights=ResNet152_Weights.DEFAULT), RESNET_CHANNELS_LARGE, in_channels)
 
 
 
@@ -164,12 +166,20 @@ class EfficientNetBackbone(ABackbone):
         (if concat_group_channels is true) will be returned.
         The grouping can be useful e.g. if two consecutive blocks work on the same image size. 
     """
-    def __init__(self, efficientnet, child_channels: t.List[int], child_group_idx: t.List[int], concat_group_channels:bool = False):
+    def __init__(self, efficientnet, child_channels: t.List[int], child_group_idx: t.List[int], concat_group_channels:bool = False, in_channels: int = 3):
         super().__init__()
         
         children = list(efficientnet.features.children())
         assert len(child_group_idx) == len(child_channels)
         assert len(child_group_idx) == len(children)
+
+        if in_channels != 3:
+            block0 = list(children[0].children())
+            conv0 : nn.Conv2d = block0[0]
+            children[0] = nn.Sequential(
+                nn.Conv2d(in_channels, conv0.out_channels, conv0.kernel_size, conv0.stride, conv0.padding, conv0.dilation, bias=conv0.bias),
+                *block0[1:]
+            )
 
         modules = []
         channels = []
@@ -216,37 +226,41 @@ class EfficientNetBackbone(ABackbone):
         return self.channels
     
 class EfficientNetV2_S_Backbone(EfficientNetBackbone):
-    def __init__(self, concat_group_channels: bool = False):
+    def __init__(self, concat_group_channels: bool = False, in_channels: int = 3):
         super().__init__(
             efficientnet = efficientnet_v2_s(EfficientNet_V2_S_Weights.DEFAULT), 
             child_channels = [24, 24, 48, 64, 128, 160, 256, 1280], 
             child_group_idx = [0, 0, 1, 2, 3, 3, 4, 4],
-            concat_group_channels = concat_group_channels
+            concat_group_channels = concat_group_channels,
+            in_channels = in_channels
         )
 
 class EfficientNetV2_M_Backbone(EfficientNetBackbone):
-    def __init__(self, concat_group_channels: bool = False):
+    def __init__(self, concat_group_channels: bool = False, in_channels: int = 3):
         super().__init__(
             efficientnet = efficientnet_v2_m(EfficientNet_V2_M_Weights.DEFAULT), 
             child_channels = [24, 24, 48, 80, 160, 176, 304, 512, 1280], 
             child_group_idx = [0, 0, 1, 2, 3, 3, 4, 4, 4],
-            concat_group_channels = concat_group_channels
+            concat_group_channels = concat_group_channels,
+            in_channels = in_channels
         )
 
 class EfficientNetV2_L_Backbone(EfficientNetBackbone):
-    def __init__(self, concat_group_channels: bool = False):
+    def __init__(self, concat_group_channels: bool = False, in_channels: int = 3):
         super().__init__(
             efficientnet = efficientnet_v2_l(EfficientNet_V2_L_Weights.DEFAULT), 
             child_channels = [32, 32, 64, 96, 192, 224, 384, 640, 1280], 
             child_group_idx = [0, 0, 1, 2, 3, 3, 4, 4, 4],
-            concat_group_channels = concat_group_channels
+            concat_group_channels = concat_group_channels,
+            in_channels = in_channels
         )
 
 class EfficientNet_B5_Backbone(EfficientNetBackbone):
-    def __init__(self, concat_group_channels: bool = False):
+    def __init__(self, concat_group_channels: bool = False, in_channels: int = 3):
         super().__init__(
             efficientnet = efficientnet_b5(EfficientNet_B5_Weights.DEFAULT),
             child_channels = [48, 24, 40, 64, 128, 176, 304, 512, 2048],
             child_group_idx = [0, 0, 1, 2, 3, 3, 4, 4, 4],
-            concat_group_channels = concat_group_channels
+            concat_group_channels = concat_group_channels,
+            in_channels = in_channels
         )
