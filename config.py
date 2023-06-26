@@ -2,14 +2,31 @@ from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBl
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, \
     TopologyPreservingLoss
-from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
+from src.transforms import AUG_TRANSFORM
 import albumentations as A
 
 from torch.optim import Adam
 import torch
 from torch import nn
+from torchvision import transforms
 
 PREDICT_USING_PATCHES = True
+MODEL_RES = 224  # Adjust resolution based on the model you're using
+# Default: 224 (ResNets etc.)
+# EfficientNetV2 S: 384, M: 480, L: 480
+# EfficientNetB5: 456
+
+# Automatically calculated - do not modify =============================================================================
+TRAIN_AUG_TRANSFORM = A.Compose([
+    A.RandomCrop(height=MODEL_RES, width=MODEL_RES) if PREDICT_USING_PATCHES else A.Resize(height=MODEL_RES, width=MODEL_RES),
+    AUG_TRANSFORM
+])
+
+VAL_AUG_TRANSFORM = A.CenterCrop(height=MODEL_RES, width=MODEL_RES) \
+    if PREDICT_USING_PATCHES else A.Resize(height=MODEL_RES, width=MODEL_RES)
+
+RUN_AUG_TRANSFORM = None if PREDICT_USING_PATCHES else transforms.Resize(MODEL_RES)
+# ======================================================================================================================
 
 UNET_MODEL_CONFIG = {
     'model_cls': UNet,
@@ -66,13 +83,12 @@ TRAIN_CONFIG = {
     'train_dataset_kwargs': {
         'data_dir': 'data/data1k',  # use our data for training
         'hist_equalization': False,
-        'aug_transform': AUG_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else AUG_TRANSFORM,
+        'aug_transform': TRAIN_AUG_TRANSFORM,
     },
     'val_dataset_kwargs': {
         'data_dir': 'data/training',  # use original training data for validation
         'hist_equalization': False,
-        'aug_transform': A.CenterCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224,
-                                                                                                    width=224),
+        'aug_transform': VAL_AUG_TRANSFORM,
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
@@ -93,7 +109,7 @@ RUN_CONFIG = {
     'dataset_kwargs': {
         'data_dir': 'data/test',
         'hist_equalization': False,
-        'transform': RUN_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else RUN_TRANSFORM,
+        'transform': RUN_AUG_TRANSFORM,
     },
     'use_patches': PREDICT_USING_PATCHES,
     'patches_config': {
