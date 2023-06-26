@@ -1,6 +1,7 @@
 from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
-from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, TopologyPreservingLoss
+from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, \
+    TopologyPreservingLoss
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 import albumentations as A
 
@@ -23,8 +24,8 @@ MAUNET_MODEL_CONFIG = {
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
         'up_mode': 'upsample',
-        'ag_batch_norm': False, # use batch norm for attention gates (false in paper)
-        'ag_bias_wx': False # use bias for attention gates (false in paper)
+        'ag_batch_norm': False,  # use batch norm for attention gates (false in paper)
+        'ag_bias_wx': False  # use bias for attention gates (false in paper)
     }
 }
 
@@ -39,11 +40,12 @@ DLINKNET_MODEL_CONFIG = {
 MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
-    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'), # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
+    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
+    # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
     'val_metrics': {
-        'acc': PatchAccuracy(patch_size=16, cutoff=0.25),
+        'acc': PatchF1Score(patch_size=16, cutoff=0.25),
         'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
-        'patchf1score': PatchF1Score(),
+        'patchaccuracy': PatchAccuracy(patch_size=16, cutoff=0.25),
     },
     'optimizer_cls': Adam,
     'optimizer_kwargs': {
@@ -69,7 +71,8 @@ TRAIN_CONFIG = {
     'val_dataset_kwargs': {
         'data_dir': 'data/training',  # use original training data for validation
         'hist_equalization': False,
-        'aug_transform': A.CenterCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224, width=224),
+        'aug_transform': A.CenterCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224,
+                                                                                                    width=224),
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
