@@ -79,7 +79,7 @@ TRAIN_CONFIG = {
         'log_every_n_steps': 1,
     },
     'train_pl_wrapper_kwargs': {
-        'batch_size': 8,
+        'batch_size': 32,
         'num_workers_dl': 2,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
         'save_checkpoints': True,
