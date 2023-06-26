@@ -1,4 +1,4 @@
-from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet
+from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, TopologyPreservingLoss
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
@@ -26,6 +26,14 @@ MAUNET_MODEL_CONFIG = {
         'ag_batch_norm': False, # use batch norm for attention gates (false in paper)
         'ag_bias_wx': False # use bias for attention gates (false in paper)
     }
+}
+
+DLINKNET_MODEL_CONFIG = {
+    'model_cls': DLinkNet,
+    'backbone_cls': Resnet34Backbone,
+    'model_kwargs': {
+        'up_block_ctor': lambda ci, co: DLinkUpBlock(ci, co),
+    },
 }
 
 MODEL_CONFIG = UNET_MODEL_CONFIG
