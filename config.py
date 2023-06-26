@@ -1,5 +1,6 @@
 from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
+from src.models import EfficientNetV2_S_Backbone, EfficientNetV2_M_Backbone, EfficientNetV2_L_Backbone, EfficientNet_B5_Backbone
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, TopologyPreservingLoss
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 import albumentations as A
@@ -78,7 +79,7 @@ TRAIN_CONFIG = {
         'log_every_n_steps': 1,
     },
     'train_pl_wrapper_kwargs': {
-        'batch_size': 32,
+        'batch_size': 8,
         'num_workers_dl': 2,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
         'save_checkpoints': True,
