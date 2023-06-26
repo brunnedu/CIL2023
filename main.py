@@ -71,8 +71,6 @@ def train():
     )
 
 
-@cli.command()
-
 def _run(output_path, use_last_ckpt):
     """
         Runs a model on all the provided data and saves the output
