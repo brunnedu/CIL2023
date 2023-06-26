@@ -70,7 +70,16 @@ def train():
         **config['train_pl_wrapper_kwargs'],
     )
 
-def _run(output_path):
+
+@cli.command()
+
+def _run(output_path, use_last_ckpt):
+    """
+        Runs a model on all the provided data and saves the output
+
+        Additionally, (if make_submission flag is set), the submission.csv will be generated which conforms to the
+        format required on the kaggle competition.
+    """
     config = RUN_CONFIG
     experiment_id = config['experiment_id']
 
@@ -96,17 +105,20 @@ def _run(output_path):
         pl_wrapper=pl_wrapper,
         dataset=dataset,
         patches_config=config['patches_config'] if config['use_patches'] else None,
-        out_dir=output_path
+        out_dir=output_path,
+        use_last_ckpt=use_last_ckpt,
     )
 
 @cli.command()
 @click.option('-o', '--output_path', default=None,
               help='Where the outputs should be stored')
-def run(output_path):
+@click.option('-l', '--use_last_ckpt', is_flag=True, 
+              help='Use last checkpoint for inference')
+def run(output_path, use_last_ckpt):
     """
         Runs a model on all the provided data and saves the output
     """
-    _run(output_path)
+    _run(output_path, use_last_ckpt)
 
 @cli.command()
 def prepare_for_refinement():
@@ -131,14 +143,15 @@ def prepare_for_refinement():
 @click.argument('experiment_id', required=True)
 @click.option('-t', '--foreground_threshold', default=0.25,
               help='The foreground threshold that should be used when generating a submission')
-def submission(experiment_id, foreground_threshold):
+@click.option('-l', '--use_last_ckpt', is_flag=True, help='Use last checkpoint for submission')
+def submission(experiment_id, foreground_threshold, use_last_ckpt):
     """
         Generates the submission.csv (according to the format specified on kaggle) and also generates each individual mask.
     """
     logger = create_logger(experiment_id)
 
-    experiment_dir = f'./out/{experiment_id}'
-    run_dir = os.path.join(experiment_dir, 'run')
+    experiment_dir = os.path.join('out', experiment_id)
+    run_dir = os.path.join(experiment_dir, 'run_last' if use_last_ckpt else 'run')
 
     if not os.path.exists(run_dir):
         logger.error(f'Cannot generate submission before executing run as the outputs do not exist yet!')
@@ -146,10 +159,11 @@ def submission(experiment_id, foreground_threshold):
 
     image_filenames = [os.path.join(run_dir, name) for name in os.listdir(run_dir)]
 
-    submission_dir = os.path.join(experiment_dir, f'submission{int(foreground_threshold * 100)}')
+    submission_str = f'submission{int(foreground_threshold * 100)}_last' if use_last_ckpt else f'submission{int(foreground_threshold * 100)} '
+    submission_dir = os.path.join(experiment_dir, submission_str)
     os.makedirs(submission_dir, exist_ok=True)
 
-    submission_filename = os.path.join(submission_dir, f'submission{int(foreground_threshold * 100)}.csv')
+    submission_filename = os.path.join(submission_dir, f'{submission_str}.csv')
     masks_to_submission(
         submission_filename,
         submission_dir,

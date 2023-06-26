@@ -1,7 +1,7 @@
 numpy
-torch
+torch==1.13.0
 pytorch-lightning
-torchvision
+torchvision==0.14.0
 Pillow
 albumentations
 tensorboard
@@ -13,7 +13,9 @@ opencv-python
 
 absl-py
 
-sklearn
+scikit-learn
 jupyter
 
 tqdm
+
+urllib3==1.26.6

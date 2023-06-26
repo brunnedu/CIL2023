@@ -60,7 +60,8 @@ def run_pl_wrapper(
         dataset: Dataset,
         pl_wrapper: pl.LightningModule,
         patches_config: t.Optional[t.Dict],
-        out_dir: t.Optional[str] = None
+        out_dir: t.Optional[str] = None,
+        use_last_ckpt: bool = False,
 ) -> float:
     """
     Run the model on every element of a dataset
@@ -73,6 +74,7 @@ def run_pl_wrapper(
     - patches_config: specifies if prediction will be done in patches or all at once
     - out_dir (optional): where should the generated images be stored? 
         if not specified, will create a run folder inside the experiment folder
+    - use_last_ckpt: if true, will use the last checkpoint instead of the best one
     """
 
     # create data loader
@@ -81,7 +83,10 @@ def run_pl_wrapper(
     tb_logger.experiment.add_text('experiment_id', experiment_id)
 
     experiment_dir = os.path.join('out', experiment_id)
-    checkpoint_file = [f for f in os.listdir(experiment_dir) if 'model-epoch=' in f][0]
+    if use_last_ckpt:
+        checkpoint_file = [f for f in os.listdir(experiment_dir) if f.startswith('last')][0]
+    else:
+        checkpoint_file = [f for f in os.listdir(experiment_dir) if f.startswith('model-epoch=')][0]
     print(f'Loading {checkpoint_file}')
 
     if patches_config:
@@ -94,13 +99,13 @@ def run_pl_wrapper(
     # load model
     # TODO: make this work with pl load_from_checkpoint (issue: plwrapper has module as hyperparameter)
     pl_wrapper.load_state_dict(
-        torch.load(os.path.join(experiment_dir, checkpoint_file), map_location=torch.device(device))['state_dict'],
-        device)
+        torch.load(os.path.join(experiment_dir, checkpoint_file), map_location=torch.device(device))['state_dict']
+    )
     pl_wrapper = pl_wrapper.to(device)
     pl_wrapper = pl_wrapper.eval()
 
     if out_dir is None:
-        out_dir = f'./out/{experiment_id}/run'
+        out_dir = os.path.join(experiment_dir, 'run_last' if use_last_ckpt else 'run')
     os.makedirs(out_dir, exist_ok=True)
 
     with torch.no_grad():

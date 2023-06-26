@@ -1,5 +1,6 @@
-from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet
+from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
+from src.models import EfficientNetV2_S_Backbone, EfficientNetV2_M_Backbone, EfficientNetV2_L_Backbone, EfficientNet_B5_Backbone
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, TopologyPreservingLoss
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 import albumentations as A
@@ -18,7 +19,8 @@ UNET_MODEL_CONFIG = {
         'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
     },
     'backbone_kwargs': {
-        'in_channels': 4 if IS_REFINEMENT else 3
+        'in_channels': 4 if IS_REFINEMENT else 3,
+        # 'concat_group_channels': True # only for efficientnet backbones
     }
 }
 
@@ -31,7 +33,20 @@ MAUNET_MODEL_CONFIG = {
         'ag_bias_wx': False # use bias for attention gates (false in paper)
     },
     'backbone_kwargs': {
-        'in_channels': 4 if IS_REFINEMENT else 3
+        'in_channels': 4 if IS_REFINEMENT else 3,
+        # 'concat_group_channels': True # only for efficientnet backbones
+    }
+}
+
+DLINKNET_MODEL_CONFIG = {
+    'model_cls': DLinkNet,
+    'backbone_cls': Resnet34Backbone,
+    'model_kwargs': {
+        'up_block_ctor': lambda ci, co: DLinkUpBlock(ci, co),
+    },
+    'backbone_kwargs': {
+        'in_channels': 4 if IS_REFINEMENT else 3,
+        # 'concat_group_channels': True # only for efficientnet backbones
     }
 }
 
@@ -40,9 +55,9 @@ MODEL_CONFIG = UNET_MODEL_CONFIG
 PL_WRAPPER_KWARGS = {
     'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'), # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
     'val_metrics': {
-        'acc': PatchAccuracy(patch_size=16, cutoff=0.25),
+        'acc': PatchF1Score(patch_size=16, cutoff=0.25),
         'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
-        'patchf1score': PatchF1Score(),
+        'patchaccuracy': PatchAccuracy(patch_size=16, cutoff=0.25),
     },
     'optimizer_cls': Adam,
     'optimizer_kwargs': {
