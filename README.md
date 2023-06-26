@@ -28,6 +28,14 @@ Make sure to fully specify the `experiment_id` (including the timestamp!).
 In case you want to specify a different foreground threshold, use `-t 0.5` for example.\
 Make sure to fully specify the experiment name (including the timestamp!).
 
+#### Refinement:
+Model will be trained to learn the difference between the current mask and the actual mask (it also gets the original image as the input). Since this is an easier task than the original classification, it might perform better.\
+1. Use the config that was used for the base model and update the run experiment id
+1. Generate the low quality masks using `python main.py prepare-for-refinement`
+1. Update the config to whatever you want, set IS_REFINEMENT = True
+1. You can now run training/testing like for basic training
+
+
 #### To see a list of all available commands type:
 `python main.py --help`
 
