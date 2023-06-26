@@ -1,15 +1,34 @@
-from src.models import UNet, UNetPP, Resnet18Backbone, UpBlock, LUNet, DLinkNet, Resnet34Backbone
-from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score
-from src.models.dlinknet.blocks import DLinkUpBlock
+from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock
+from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
+from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, TopologyPreservingLoss
 from src.transforms import AUG_TRANSFORM, AUG_PATCHES_TRANSFORM, RUN_TRANSFORM, RUN_PATCHES_TRANSFORM
 import albumentations as A
 
 from torch.optim import Adam
 import torch
+from torch import nn
 
-PREDICT_USING_PATCHES = False
+PREDICT_USING_PATCHES = True
 
-MODEL_CONFIG_DLINKNET = {
+UNET_MODEL_CONFIG = {
+    'model_cls': UNet,
+    'backbone_cls': Resnet18Backbone,
+    'model_kwargs': {
+        'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
+    }
+}
+
+MAUNET_MODEL_CONFIG = {
+    'model_cls': MAUNet,
+    'backbone_cls': Resnet18Backbone,
+    'model_kwargs': {
+        'up_mode': 'upsample',
+        'ag_batch_norm': False, # use batch norm for attention gates (false in paper)
+        'ag_bias_wx': False # use bias for attention gates (false in paper)
+    }
+}
+
+DLINKNET_MODEL_CONFIG = {
     'model_cls': DLinkNet,
     'backbone_cls': Resnet34Backbone,
     'model_kwargs': {
@@ -17,7 +36,7 @@ MODEL_CONFIG_DLINKNET = {
     },
 }
 
-MODEL_CONFIG = MODEL_CONFIG_DLINKNET
+MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
     'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'), # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
@@ -67,7 +86,7 @@ TRAIN_CONFIG = {
 }
 
 RUN_CONFIG = {
-    'experiment_id': '',
+    'experiment_id': 'test_run_2023-06-23_15-34-04',
     'dataset_kwargs': {
         'data_dir': 'data/test',
         'hist_equalization': False,
