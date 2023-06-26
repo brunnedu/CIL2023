@@ -24,8 +24,8 @@ MAUNET_MODEL_CONFIG = {
     'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
         'up_mode': 'upsample',
-        'ag_batch_norm': False, # use batch norm for attention gates (false in paper)
-        'ag_bias_wx': False # use bias for attention gates (false in paper)
+        'ag_batch_norm': False,  # use batch norm for attention gates (false in paper)
+        'ag_bias_wx': False  # use bias for attention gates (false in paper)
     }
 }
 
@@ -40,11 +40,12 @@ DLINKNET_MODEL_CONFIG = {
 MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
-    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'), # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
+    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
+    # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
     'val_metrics': {
-        'acc': PatchAccuracy(patch_size=16, cutoff=0.25),
+        'acc': PatchF1Score(patch_size=16, cutoff=0.25),
         'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
-        'patchf1score': PatchF1Score(),
+        'patchaccuracy': PatchAccuracy(patch_size=16, cutoff=0.25),
     },
     'optimizer_cls': Adam,
     'optimizer_kwargs': {
