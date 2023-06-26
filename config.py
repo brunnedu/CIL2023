@@ -9,7 +9,7 @@ import torch
 
 PREDICT_USING_PATCHES = False
 
-MODEL_CONFIG = {
+MODEL_CONFIG_DLINKNET = {
     'model_cls': DLinkNet,
     'backbone_cls': Resnet34Backbone,
     'model_kwargs': {
@@ -17,8 +17,10 @@ MODEL_CONFIG = {
     },
 }
 
+MODEL_CONFIG = MODEL_CONFIG_DLINKNET
+
 PL_WRAPPER_KWARGS = {
-    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
+    'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'), # TopologyPreservingLoss(nr_of_iterations=50, weight_cldice=0.5, smooth=1.0)
     'val_metrics': {
         'acc': PatchAccuracy(patch_size=16, cutoff=0.25),
         'binaryf1score': BinaryF1Score(alpha=100.0),  # can add as many additional metrics as desired
@@ -38,17 +40,17 @@ PL_WRAPPER_KWARGS = {
 }
 
 TRAIN_CONFIG = {
-    'experiment_id': 'dinknet50_e100_d5kclean_no_patches',  # should be changed for every run
+    'experiment_id': 'test_run',  # should be changed for every run
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
     'train_dataset_kwargs': {
-        'data_dir': 'data/data5k_cleaned',  # use our data for training
+        'data_dir': 'data/data1k',  # use our data for training
         'hist_equalization': False,
         'aug_transform': AUG_PATCHES_TRANSFORM if PREDICT_USING_PATCHES else AUG_TRANSFORM,
     },
     'val_dataset_kwargs': {
         'data_dir': 'data/training',  # use original training data for validation
         'hist_equalization': False,
-        'aug_transform': A.RandomCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224, width=224),
+        'aug_transform': A.CenterCrop(height=224, width=224) if PREDICT_USING_PATCHES else A.Resize(height=224, width=224),
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
