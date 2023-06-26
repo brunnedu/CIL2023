@@ -157,7 +157,7 @@ def submission(experiment_id, foreground_threshold, use_last_ckpt):
 
     image_filenames = [os.path.join(run_dir, name) for name in os.listdir(run_dir)]
 
-    submission_str = f'submission{int(foreground_threshold * 100)}_last' if use_last_ckpt else f'submission{int(foreground_threshold * 100)} '
+    submission_str = f'submission{int(foreground_threshold * 100)}_last' if use_last_ckpt else f'submission{int(foreground_threshold * 100)}'
     submission_dir = os.path.join(experiment_dir, submission_str)
     os.makedirs(submission_dir, exist_ok=True)
 
