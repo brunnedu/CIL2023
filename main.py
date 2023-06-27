@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import importlib
 
 import click
 import datetime
@@ -71,25 +72,35 @@ def train():
     )
 
 
-def _run(output_path, use_last_ckpt):
+def _run(output_path, use_last_ckpt, no_auto_config):
     """
         Runs a model on all the provided data and saves the output
 
         Additionally, (if make_submission flag is set), the submission.csv will be generated which conforms to the
         format required on the kaggle competition.
     """
-    config = RUN_CONFIG
-    experiment_id = config['experiment_id']
+    experiment_id = RUN_CONFIG['experiment_id']
+
+    # try to retrieve original RUN_CONFIG from experiment directory
+    # but always use RUN_CONFIG from CIL2023/config.py for dataset_kwargs and patches_config
+    orig_config_name = '.'.join(["out", experiment_id, "config"])
+    orig_config_path = os.path.join("out", experiment_id, "config.py")
+    if os.path.isfile(orig_config_path) and not no_auto_config:
+        print(f"Original RUN_CONFIG successfully retrieved from experiment directory.")
+        config = importlib.import_module(orig_config_name)
+        config = config.RUN_CONFIG
+    else:
+        print(f"Could not retrieve original RUN_CONFIG from {orig_config_path}. Will use CIL2023/config.py instead.")
+        config = RUN_CONFIG
 
     # initialize dataset
-    dataset = SatelliteDatasetRun(**config['dataset_kwargs'])
+    dataset = SatelliteDatasetRun(**RUN_CONFIG['dataset_kwargs'])
 
     # initialize model
     model_config = config['model_config']
     # models with backbone require separate initialization of backbone
     if 'backbone_cls' in model_config and model_config['backbone_cls'] is not None:
         model_config['model_kwargs']['backbone'] = model_config['backbone_cls'](**model_config.get('backbone_kwargs', {}))
-
     model = model_config['model_cls'](**model_config['model_kwargs'])
 
     # initialize pytorch lightning wrapper for model
@@ -102,7 +113,7 @@ def _run(output_path, use_last_ckpt):
         experiment_id=experiment_id,
         pl_wrapper=pl_wrapper,
         dataset=dataset,
-        patches_config=config['patches_config'] if config['use_patches'] else None,
+        patches_config=RUN_CONFIG['patches_config'] if config['use_patches'] else None,
         out_dir=output_path,
         use_last_ckpt=use_last_ckpt,
     )
@@ -112,11 +123,13 @@ def _run(output_path, use_last_ckpt):
               help='Where the outputs should be stored')
 @click.option('-l', '--use_last_ckpt', is_flag=True, 
               help='Use last checkpoint for inference')
-def run(output_path, use_last_ckpt):
+@click.option('-a', '--no_auto_config', is_flag=True,
+              help='Dont try to retrieve original RUN_CONFIG from experiment directory')
+def run(output_path, use_last_ckpt, no_auto_config):
     """
         Runs a model on all the provided data and saves the output
     """
-    _run(output_path, use_last_ckpt)
+    _run(output_path, use_last_ckpt, no_auto_config)
 
 @cli.command()
 def prepare_for_refinement():
