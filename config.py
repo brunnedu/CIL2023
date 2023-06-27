@@ -1,3 +1,5 @@
+from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
+
 from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
 from src.models import EfficientNetV2_S_Backbone, EfficientNetV2_M_Backbone, EfficientNetV2_L_Backbone, EfficientNet_B5_Backbone
@@ -110,6 +112,10 @@ TRAIN_CONFIG = {
     'pl_trainer_kwargs': {
         'max_epochs': 100,
         'log_every_n_steps': 1,
+        'callbacks': [
+            # (EarlyStopping, {'monitor': 'val_loss', 'mode': 'min', 'patience': 1}),
+            # (LearningRateMonitor, {'logging_interval': 'epoch'}),
+        ]
     },
     'train_pl_wrapper_kwargs': {
         'batch_size': 32,
