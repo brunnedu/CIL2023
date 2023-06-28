@@ -8,6 +8,8 @@ import cv2
 
 import pytorch_lightning as pl
 
+from tqdm import tqdm
+
 
 def predict(
         image: torch.Tensor,
@@ -109,7 +111,7 @@ def run_pl_wrapper(
     os.makedirs(out_dir, exist_ok=True)
 
     with torch.no_grad():
-        for i, (names, original_sizes, images) in enumerate(dataloader):
+        for i, (names, original_sizes, images) in enumerate(tqdm(dataloader)):
             if patches_config:
                 output = predict_patches(images, patches_config['size'], patches_config['subdivisions'], pl_wrapper,
                                          device)
@@ -118,6 +120,3 @@ def run_pl_wrapper(
 
             output = output[0].to('cpu').squeeze().numpy() * 255
             cv2.imwrite(os.path.join(out_dir, names[0]), output)
-
-            if i % 10 == 0:
-                print(i)
