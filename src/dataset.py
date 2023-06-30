@@ -45,7 +45,7 @@ class SatelliteDataset(Dataset):
         self.data_dir = data_dir
         self.add_data_dir = add_data_dir
         self.include_low_quality_mask = include_low_quality_mask
-        self.img_paths = [os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images'))]
+        self.img_paths = [os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images')) if f.endswith('.png')]
         self.mask_paths = [os.path.join(self.data_dir, 'groundtruth', os.path.split(p)[-1]) for p in self.img_paths]
         self.low_quality_mask_paths = [os.path.join(self.data_dir, 'lowqualitymask', os.path.split(p)[-1]) for p in self.img_paths]
 
@@ -55,7 +55,7 @@ class SatelliteDataset(Dataset):
 
         if self.add_data_dir:
             # add additional data
-            add_img_paths = [os.path.join(self.add_data_dir, 'images', f) for f in os.listdir(os.path.join(self.add_data_dir, 'images'))]
+            add_img_paths = [os.path.join(self.add_data_dir, 'images', f) for f in os.listdir(os.path.join(self.add_data_dir, 'images')) if f.endswith('.png')]
             add_mask_paths = [os.path.join(self.add_data_dir, 'groundtruth', os.path.split(p)[-1]) for p in add_img_paths]
             add_low_quality_mask_paths = [os.path.join(self.add_data_dir, 'lowqualitymask', os.path.split(p)[-1]) for p in add_img_paths]
             self.img_paths += add_img_paths
@@ -141,7 +141,7 @@ class SatelliteDatasetRun(Dataset):
         self.data_dir = data_dir
         self.include_low_quality_mask = include_low_quality_mask
         self.img_dir = os.path.join(self.data_dir, 'images')
-        self.img_paths = list(os.listdir(self.img_dir))
+        self.img_paths = list([p for p in os.listdir(self.img_dir) if p.endswith('.png')])
         self.low_quality_mask_paths = [os.path.join(self.data_dir, 'lowqualitymask', os.path.split(p)[-1]) for p in self.img_paths]
 
         self.hist_equalization = hist_equalization
