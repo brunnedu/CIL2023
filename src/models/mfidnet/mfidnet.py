@@ -67,9 +67,8 @@ class MfidFinal(nn.Module):
         y = torch.cat([y_mask, y_flow, y_intersection, y_deadend], dim=1)
 
         final_mask = self.combine(y)
-        ux[:,0,:,:] = ((ux_mask + final_mask) * 0.5).squeeze(1)
-
-        return torch.cat([final_mask, ux_flow, ux_intersection, ux_deadend], dim=1)
+        
+        return torch.cat([(ux_mask + final_mask) * 0.5, ux_flow, ux_intersection, ux_deadend], dim=1)
 
     def extract_mfid(self, x):
         return x[:,0,:,:].unsqueeze(1), x[:,1,:,:].unsqueeze(1), x[:,2,:,:].unsqueeze(1), x[:,3,:,:].unsqueeze(1)
