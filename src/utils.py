@@ -1,8 +1,6 @@
 import copy
-import csv
 import logging
 import os
-import random
 import time
 from typing import Tuple, Union, List, Dict
 
@@ -15,6 +13,119 @@ from torchvision.transforms import Normalize
 from matplotlib import pyplot as plt
 
 from src.models import UpBlock
+
+import importlib
+from src.wrapper import PLWrapper
+import typing as t
+from functools import reduce
+
+
+def get_config(experiment_id: str):
+    config_path = os.path.join("out", experiment_id, "config.py")
+
+    if not os.path.isfile(config_path):
+        print(f"WARNING: No config at {config_path}")
+        return
+
+    config = importlib.import_module('.'.join(["out", experiment_id, "config"]))
+
+    return config
+
+
+def get_ckpt_path(experiment_id: str, last: bool = False) -> str:
+    experiment_dir = os.path.join('out', experiment_id)
+
+    ckpt_name = [f for f in os.listdir(experiment_dir) if f.startswith('last' if last else 'model-epoch=')][0]
+
+    ckpt_path = os.path.join(experiment_dir, ckpt_name)
+
+    return ckpt_path
+
+
+def init_model(model_config: t.Dict):
+    if 'backbone_cls' in model_config and model_config['backbone_cls'] is not None:
+        model_config['model_kwargs']['backbone'] = model_config['backbone_cls'](
+            **model_config.get('backbone_kwargs', {}))
+    model = model_config['model_cls'](**model_config['model_kwargs'])
+
+    return model
+
+
+def init_wrapper(config):
+    model = init_model(config.TRAIN_CONFIG['model_config'])
+
+    # initialize pytorch lightning wrapper for model
+    pl_wrapper = PLWrapper(
+        model=model,
+        **config.TRAIN_CONFIG['pl_wrapper_kwargs'],
+    )
+
+    return pl_wrapper
+
+
+def load_wrapper(experiment_id: str, last: bool = False, ret_cfg: bool = False, device: str = None) -> t.Tuple:
+    """
+    Load pytorch lightning wrapper from experiment_id
+
+    Parameters
+    ----------
+    experiment_id : str
+        The experiment_id to load the PLWrapper from.
+    last : bool
+        Whether to load the wrapper from the last epoch instead of the best epoch.
+    ret_cfg : bool
+        Whether to also return the config.
+    device : str
+        Which device to load the PLWrapper to.
+    """
+
+    # initialize the base wrapper
+    config = get_config(experiment_id)
+    pl_wrapper = init_wrapper(config)
+
+    # load state dict
+    if device is None:
+        device = 'gpu' if torch.cuda.is_available() else 'cpu'
+    ckpt_path = get_ckpt_path(experiment_id, last)
+    pl_wrapper.load_state_dict(
+        torch.load(ckpt_path, map_location=device)['state_dict']
+    )
+    pl_wrapper = pl_wrapper.to(device)
+
+    if ret_cfg:
+        return pl_wrapper, config
+
+    return pl_wrapper
+
+
+def load_model(experiment_id: str, last: bool = False, ret_cfg: bool = False, device: str = None) -> t.Tuple:
+    """
+    Load pytorch model from experiment_id (without wrapper)
+
+    Parameters
+    ----------
+    experiment_id : str
+        The experiment_id to load the PLWrapper from.
+    last : bool
+        Whether to load the wrapper from the last epoch instead of the best epoch.
+    ret_cfg : bool
+        Whether to also return the config.
+    device : str
+        Which device to load the PLWrapper to.
+    """
+
+    res = load_wrapper(experiment_id, last, ret_cfg, device)
+
+    if ret_cfg:
+        pl_wrapper, config = res
+        return pl_wrapper.model, config
+
+    return res.model
+
+
+def prime_factors(n):
+    return set(reduce(list.__add__,
+                      ([i, n // i] for i in range(1, int(n ** 0.5) + 1) if n % i == 0)))
 
 
 def create_logger(experiment_id: str) -> logging.Logger:
