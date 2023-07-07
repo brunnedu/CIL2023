@@ -53,13 +53,13 @@ def init_model(model_config: t.Dict):
     return model
 
 
-def init_wrapper(config):
-    model = init_model(config.TRAIN_CONFIG['model_config'])
+def init_wrapper(train_config: t.Dict):
+    model = init_model(train_config['model_config'])
 
     # initialize pytorch lightning wrapper for model
     pl_wrapper = PLWrapper(
         model=model,
-        **config.TRAIN_CONFIG['pl_wrapper_kwargs'],
+        **train_config['pl_wrapper_kwargs'],
     )
 
     return pl_wrapper
