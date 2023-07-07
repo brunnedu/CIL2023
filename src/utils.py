@@ -2,6 +2,7 @@ import copy
 import logging
 import os
 import time
+import warnings
 from typing import Tuple, Union, List, Dict
 
 import numpy as np
@@ -11,8 +12,6 @@ import torchvision
 from pytorch_lightning import Callback, LightningModule, Trainer
 from torchvision.transforms import Normalize
 from matplotlib import pyplot as plt
-
-from src.models import UpBlock
 
 import importlib
 from src.wrapper import PLWrapper
@@ -85,7 +84,7 @@ def load_wrapper(experiment_id: str, last: bool = False, ret_cfg: bool = False, 
 
     # load state dict
     if device is None:
-        device = 'gpu' if torch.cuda.is_available() else 'cpu'
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
     ckpt_path = get_ckpt_path(experiment_id, last)
     pl_wrapper.load_state_dict(
         torch.load(ckpt_path, map_location=device)['state_dict']
@@ -270,7 +269,7 @@ def up_block_ctor_conv(ci: int):
     Workaround because lambda functions aren't serializable with pickle.
     """
 
-    return UpBlock(ci, up_mode='upconv')
+    # return UpBlock(ci, up_mode='upconv')
 
 
 def sample_param_val(trial: optuna.Trial, kwarg: str, val: Tuple[str, float, float]) -> Union[float, int]:
