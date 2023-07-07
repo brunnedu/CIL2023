@@ -111,6 +111,7 @@ def prepare_for_refinement():
         'data/test',
         'data/data1k',
         'data/data5k',
+        'data/data30k',
     ]
 
     for path in paths:
