@@ -10,6 +10,8 @@ import pytorch_lightning as pl
 
 from tqdm import tqdm
 
+from src.utils import get_ckpt_path, load_wrapper
+
 
 def predict(
         image: torch.Tensor,
@@ -28,11 +30,60 @@ def predict_patches(
         patch_size: t.Tuple[int],
         subdivisions: t.Tuple[int],
         pl_wrapper: pl.LightningModule,
+        device: str = None,
+) -> torch.Tensor:
+    """
+    Predicts a large image by splitting it into patches, predicting each patch individually and finally averaging them.
+    """
+
+    if device is None:
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    N, C, H, W = image.shape
+
+    ph, pw = patch_size
+    sh, sw = subdivisions
+
+    stride_h = (H - ph) // (sh - 1)
+    stride_w = (W - pw) // (sw - 1)
+
+    assert (H - ph) % (sh - 1) == 0 and (W - pw) % (sw - 1) == 0, \
+        f"In order to consider all pixels in the patch prediction use one of the following " \
+        f"number of subdivisions: {[f + 1 for f in sorted(prime_factors(H - ph))]} "
+
+    # generate patches from image
+    patches = image.unfold(2, size=ph, step=stride_h).unfold(3, size=pw, step=stride_w)
+
+    # pass patches through model
+    inputs = patches.permute(0, 2, 3, 1, 4, 5).reshape(-1, C, ph, pw)
+    outputs = pl_wrapper(inputs.to(device))
+    ch_out = outputs.shape[1]
+
+    # overlay predicted patches and average
+    outputs = outputs.reshape(N, sh, sw, ch_out, ph, pw).permute(0, 3, 4, 5, 1, 2).reshape(N, ch_out * ph * pw, -1)
+    norm_cnt = torch.ones_like(outputs, dtype=torch.float).to(device)
+
+    outputs = F.fold(outputs, output_size=(H, W), kernel_size=patch_size, stride=(stride_h, stride_w))
+    norm_cnt = F.fold(norm_cnt, output_size=(H, W), kernel_size=patch_size, stride=(stride_h, stride_w))
+
+    final_outputs = outputs / norm_cnt
+
+    return final_outputs
+
+
+def predict_patches_old(
+        image: torch.Tensor,
+        patch_size: t.Tuple[int],
+        subdivisions: t.Tuple[int],
+        pl_wrapper: pl.LightningModule,
         device: str
 ) -> torch.Tensor:
+    """
+    Old version of predict_patches. This version can't handle batched inputs but is able to handle (4, 4) subdivisions.
+    """
     N, C, H, W = image.shape
-    assert N == 1
-    assert all(400 % subdiv == 0 for subdiv in subdivisions)  # make sure all input pixels are considered
+
+    assert N == 1, "This version of predict_patches can only handle batch size 1."
 
     py, px = patch_size
     sy, sx = subdivisions
@@ -60,7 +111,6 @@ def predict_patches(
 def run_pl_wrapper(
         experiment_id: str,
         dataset: Dataset,
-        pl_wrapper: pl.LightningModule,
         patches_config: t.Optional[t.Dict],
         out_dir: t.Optional[str] = None,
         use_last_ckpt: bool = False,
@@ -72,7 +122,6 @@ def run_pl_wrapper(
     ----------
     - experiment_id: the full name experiment id (determines where to load the model from)
     - dataset: provides the satellite images
-    - pl_wrapper: prototype of the model (will be loaded here)
     - patches_config: specifies if prediction will be done in patches or all at once
     - out_dir (optional): where should the generated images be stored? 
         if not specified, will create a run folder inside the experiment folder
@@ -84,12 +133,8 @@ def run_pl_wrapper(
     tb_logger = pl.loggers.TensorBoardLogger("tb_logs/", name=experiment_id)
     tb_logger.experiment.add_text('experiment_id', experiment_id)
 
-    experiment_dir = os.path.join('out', experiment_id)
-    if use_last_ckpt:
-        checkpoint_file = [f for f in os.listdir(experiment_dir) if f.startswith('last')][0]
-    else:
-        checkpoint_file = [f for f in os.listdir(experiment_dir) if f.startswith('model-epoch=')][0]
-    print(f'Loading {checkpoint_file}')
+    ckpt_path = get_ckpt_path(experiment_id, use_last_ckpt)
+    print(f'Loading {ckpt_path}')
 
     if patches_config:
         print('Predicting Using Patches')
@@ -99,15 +144,11 @@ def run_pl_wrapper(
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # load model
-    # TODO: make this work with pl load_from_checkpoint (issue: plwrapper has module as hyperparameter)
-    pl_wrapper.load_state_dict(
-        torch.load(os.path.join(experiment_dir, checkpoint_file), map_location=torch.device(device))['state_dict']
-    )
-    pl_wrapper = pl_wrapper.to(device)
+    pl_wrapper = load_wrapper(experiment_id, use_last_ckpt)
     pl_wrapper = pl_wrapper.eval()
 
     if out_dir is None:
-        out_dir = os.path.join(experiment_dir, 'run_last' if use_last_ckpt else 'run')
+        out_dir = os.path.join('out', experiment_id, 'run_last' if use_last_ckpt else 'run')
     os.makedirs(out_dir, exist_ok=True)
 
     with torch.no_grad():
