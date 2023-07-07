@@ -18,8 +18,6 @@ import importlib
 from src.wrapper import PLWrapper
 import typing as t
 from functools import reduce
-import torch.nn.functional as F
-import pytorch_lightning as pl
 
 
 def get_config(experiment_id: str):
@@ -128,89 +126,6 @@ def load_model(experiment_id: str, last: bool = False, ret_cfg: bool = False, de
 def prime_factors(n):
     """Returns the prime factors of a number"""
     return set(reduce(list.__add__, ([i, n // i] for i in range(1, int(n ** 0.5) + 1) if n % i == 0)))
-
-
-def predict_patches(
-        image: torch.Tensor,
-        patch_size: t.Tuple[int],
-        subdivisions: t.Tuple[int],
-        pl_wrapper: pl.LightningModule,
-        device: str = None,
-) -> torch.Tensor:
-    """
-    Predicts a large image by splitting it into patches, predicting each patch individually and finally averaging them.
-    """
-
-    if device is None:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    N, C, H, W = image.shape
-
-    ph, pw = patch_size
-    sh, sw = subdivisions
-
-    stride_h = (H - ph) // (sh - 1)
-    stride_w = (W - pw) // (sw - 1)
-
-    assert (H - ph) % (sh - 1) == 0 and (W - pw) % (sw - 1) == 0, \
-        f"In order to consider all pixels in the patch prediction use one of the following " \
-        f"number of subdivisions: {[f + 1 for f in sorted(prime_factors(H - ph))]} "
-
-    # generate patches from image
-    patches = image.unfold(2, size=ph, step=stride_h).unfold(3, size=pw, step=stride_w)
-
-    # pass patches through model
-    inputs = patches.permute(0, 2, 3, 1, 4, 5).reshape(-1, C, ph, pw)
-    outputs = pl_wrapper(inputs.to(device))
-    ch_out = outputs.shape[1]
-
-    # overlay predicted patches and average
-    outputs = outputs.reshape(N, sh, sw, ch_out, ph, pw).permute(0, 3, 4, 5, 1, 2).reshape(N, ch_out * ph * pw, -1)
-    norm_cnt = torch.ones_like(outputs, dtype=torch.float).to(device)
-
-    outputs = F.fold(outputs, output_size=(H, W), kernel_size=patch_size, stride=(stride_h, stride_w))
-    norm_cnt = F.fold(norm_cnt, output_size=(H, W), kernel_size=patch_size, stride=(stride_h, stride_w))
-
-    final_outputs = outputs / norm_cnt
-
-    return final_outputs
-
-
-def predict_patches_old(
-        image: torch.Tensor,
-        patch_size: t.Tuple[int],
-        subdivisions: t.Tuple[int],
-        pl_wrapper: pl.LightningModule,
-        device: str
-) -> torch.Tensor:
-    """
-    Old version of predict_patches. This version can't handle batched inputs but is able to handle (4, 4) subdivisions.
-    """
-    N, C, H, W = image.shape
-
-    assert N == 1, "This version of predict_patches can only handle batch size 1."
-
-    py, px = patch_size
-    sy, sx = subdivisions
-
-    stride_y = (H - py) / (sy - 1)
-    stride_x = (W - px) / (sx - 1)
-
-    positions = [(round(y * stride_y), round(x * stride_x)) for y in range(sy) for x in range(sx)]
-
-    images = [image[0, :, y:y + py, x:x + px] for y, x in positions]
-    images = torch.stack(images, dim=0).to(device)
-    outputs = pl_wrapper(images)
-
-    # compute the average over all generated patches
-    output_total = torch.zeros((1, 1, H, W)).to(device)
-    output_cnt = torch.zeros((1, 1, H, W)).to(device)
-    for i, (y, x) in enumerate(positions):
-        output_total[0, :, y:y + py, x:x + py] += outputs[i]
-        output_cnt[0, :, y:y + py, x:x + py] += 1.0
-
-    output = output_total / output_cnt
-    return output
 
 
 def create_logger(experiment_id: str) -> logging.Logger:
