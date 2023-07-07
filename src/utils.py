@@ -141,10 +141,10 @@ def predict_patches(
     Predicts a large image by splitting it into patches, predicting each patch individually and finally averaging them.
     """
 
-    N, C, H, W = image.shape
-
     if device is None:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    N, C, H, W = image.shape
 
     ph, pw = patch_size
     sh, sw = subdivisions
@@ -174,6 +174,43 @@ def predict_patches(
     final_outputs = outputs / norm_cnt
 
     return final_outputs
+
+
+def predict_patches_old(
+        image: torch.Tensor,
+        patch_size: t.Tuple[int],
+        subdivisions: t.Tuple[int],
+        pl_wrapper: pl.LightningModule,
+        device: str
+) -> torch.Tensor:
+    """
+    Old version of predict_patches. This version can't handle batched inputs but is able to handle (4, 4) subdivisions.
+    """
+    N, C, H, W = image.shape
+
+    assert N == 1, "This version of predict_patches can only handle batch size 1."
+
+    py, px = patch_size
+    sy, sx = subdivisions
+
+    stride_y = (H - py) / (sy - 1)
+    stride_x = (W - px) / (sx - 1)
+
+    positions = [(round(y * stride_y), round(x * stride_x)) for y in range(sy) for x in range(sx)]
+
+    images = [image[0, :, y:y + py, x:x + px] for y, x in positions]
+    images = torch.stack(images, dim=0).to(device)
+    outputs = pl_wrapper(images)
+
+    # compute the average over all generated patches
+    output_total = torch.zeros((1, 1, H, W)).to(device)
+    output_cnt = torch.zeros((1, 1, H, W)).to(device)
+    for i, (y, x) in enumerate(positions):
+        output_total[0, :, y:y + py, x:x + py] += outputs[i]
+        output_cnt[0, :, y:y + py, x:x + py] += 1.0
+
+    output = output_total / output_cnt
+    return output
 
 
 def create_logger(experiment_id: str) -> logging.Logger:
