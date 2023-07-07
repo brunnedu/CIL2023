@@ -13,7 +13,7 @@ from src.train import train_pl_wrapper
 from src.run import run_pl_wrapper
 
 from src.mask_to_submission import masks_to_submission
-from src.utils import create_logger, ensure_dir
+from src.utils import create_logger, ensure_dir, init_model, get_config
 
 # import the train config
 from config import TRAIN_CONFIG, RUN_CONFIG
@@ -83,11 +83,10 @@ def _run(output_path, use_last_ckpt, no_auto_config):
 
     # try to retrieve original RUN_CONFIG from experiment directory
     # but always use RUN_CONFIG from CIL2023/config.py for dataset_kwargs and patches_config
-    orig_config_name = '.'.join(["out", experiment_id, "config"])
     orig_config_path = os.path.join("out", experiment_id, "config.py")
-    if os.path.isfile(orig_config_path) and not no_auto_config:
+    if os.path.isfile(os.path.join("out", experiment_id, "config.py")) and not no_auto_config:
         print(f"Original RUN_CONFIG successfully retrieved from experiment directory.")
-        config = importlib.import_module(orig_config_name)
+        config = get_config(experiment_id)
         config = config.RUN_CONFIG
     else:
         print(f"Could not retrieve original RUN_CONFIG from {orig_config_path}. Will use CIL2023/config.py instead.")
@@ -96,22 +95,8 @@ def _run(output_path, use_last_ckpt, no_auto_config):
     # initialize dataset
     dataset = SatelliteDatasetRun(**RUN_CONFIG['dataset_kwargs'])
 
-    # initialize model
-    model_config = config['model_config']
-    # models with backbone require separate initialization of backbone
-    if 'backbone_cls' in model_config and model_config['backbone_cls'] is not None:
-        model_config['model_kwargs']['backbone'] = model_config['backbone_cls'](**model_config.get('backbone_kwargs', {}))
-    model = model_config['model_cls'](**model_config['model_kwargs'])
-
-    # initialize pytorch lightning wrapper for model
-    pl_wrapper = PLWrapper(
-        model=model,
-        **config['pl_wrapper_kwargs'],
-    )
-
     run_pl_wrapper(
         experiment_id=experiment_id,
-        pl_wrapper=pl_wrapper,
         dataset=dataset,
         patches_config=RUN_CONFIG['patches_config'] if config['use_patches'] else None,
         out_dir=output_path,
