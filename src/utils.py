@@ -18,6 +18,8 @@ import importlib
 from src.wrapper import PLWrapper
 import typing as t
 from functools import reduce
+import torch.nn.functional as F
+import pytorch_lightning as pl
 
 
 def get_config(experiment_id: str):
@@ -124,8 +126,54 @@ def load_model(experiment_id: str, last: bool = False, ret_cfg: bool = False, de
 
 
 def prime_factors(n):
-    return set(reduce(list.__add__,
-                      ([i, n // i] for i in range(1, int(n ** 0.5) + 1) if n % i == 0)))
+    """Returns the prime factors of a number"""
+    return set(reduce(list.__add__, ([i, n // i] for i in range(1, int(n ** 0.5) + 1) if n % i == 0)))
+
+
+def predict_patches(
+        image: torch.Tensor,
+        patch_size: t.Tuple[int],
+        subdivisions: t.Tuple[int],
+        pl_wrapper: pl.LightningModule,
+        device: str = None,
+) -> torch.Tensor:
+    """
+    Predicts a large image by splitting it into patches, predicting each patch individually and finally averaging them.
+    """
+
+    N, C, H, W = image.shape
+
+    if device is None:
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    ph, pw = patch_size
+    sh, sw = subdivisions
+
+    stride_h = (H - ph) // (sh - 1)
+    stride_w = (W - pw) // (sw - 1)
+
+    assert (H - ph) % (sh - 1) == 0 and (W - pw) % (sw - 1) == 0, \
+        f"In order to consider all pixels in the patch prediction use one of the following " \
+        f"number of subdivisions: {[f + 1 for f in sorted(prime_factors(H - ph))]} "
+
+    # generate patches from image
+    patches = image.unfold(2, size=ph, step=stride_h).unfold(3, size=pw, step=stride_w)
+
+    # pass patches through model
+    inputs = patches.permute(0, 2, 3, 1, 4, 5).reshape(-1, C, ph, pw)
+    outputs = pl_wrapper(inputs.to(device))
+    ch_out = outputs.shape[1]
+
+    # overlay predicted patches and average
+    outputs = outputs.reshape(N, sh, sw, ch_out, ph, pw).permute(0, 3, 4, 5, 1, 2).reshape(N, ch_out * ph * pw, -1)
+    norm_cnt = torch.ones_like(outputs, dtype=torch.float).to(device)
+
+    outputs = F.fold(outputs, output_size=(H, W), kernel_size=patch_size, stride=(stride_h, stride_w))
+    norm_cnt = F.fold(norm_cnt, output_size=(H, W), kernel_size=patch_size, stride=(stride_h, stride_w))
+
+    final_outputs = outputs / norm_cnt
+
+    return final_outputs
 
 
 def create_logger(experiment_id: str) -> logging.Logger:
@@ -264,12 +312,14 @@ class PyTorchLightningPruningCallback(Callback):
             message = "Trial was pruned at epoch {}.".format(epoch)
             raise optuna.TrialPruned(message)
 
+
 def up_block_ctor_conv(ci: int):
     """
     Workaround because lambda functions aren't serializable with pickle.
     """
 
     return UpBlock(ci, up_mode='upconv')
+
 
 def sample_param_val(trial: optuna.Trial, kwarg: str, val: Tuple[str, float, float]) -> Union[float, int]:
     """
@@ -308,4 +358,3 @@ def create_optuna_config(optuna_config: dict, trial: optuna.Trial) -> dict:
     instantiate_dict(current_optuna_config)
 
     return current_optuna_config
-
