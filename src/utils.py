@@ -83,7 +83,7 @@ def load_wrapper(experiment_id: str, last: bool = False, ret_cfg: bool = False, 
 
     # initialize the base wrapper
     config = get_config(experiment_id)
-    pl_wrapper = init_wrapper(config)
+    pl_wrapper = init_wrapper(config.TRAIN_CONFIG)
 
     # load state dict
     if device is None:
