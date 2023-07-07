@@ -28,7 +28,6 @@ def predict(
 def run_pl_wrapper(
         experiment_id: str,
         dataset: Dataset,
-        pl_wrapper: pl.LightningModule,
         patches_config: t.Optional[t.Dict],
         out_dir: t.Optional[str] = None,
         use_last_ckpt: bool = False,
@@ -40,7 +39,6 @@ def run_pl_wrapper(
     ----------
     - experiment_id: the full name experiment id (determines where to load the model from)
     - dataset: provides the satellite images
-    - pl_wrapper: prototype of the model (will be loaded here)
     - patches_config: specifies if prediction will be done in patches or all at once
     - out_dir (optional): where should the generated images be stored? 
         if not specified, will create a run folder inside the experiment folder
@@ -63,9 +61,7 @@ def run_pl_wrapper(
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # load model
-    # TODO: make this work with pl load_from_checkpoint (issue: plwrapper has module as hyperparameter)
     pl_wrapper = load_wrapper(experiment_id, use_last_ckpt)
-    pl_wrapper = pl_wrapper.to(device)
     pl_wrapper = pl_wrapper.eval()
 
     if out_dir is None:
