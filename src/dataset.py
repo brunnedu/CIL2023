@@ -8,6 +8,7 @@ import torchvision.transforms.functional as F
 from torchvision.transforms import Normalize
 from torch.utils.data import Dataset
 from torchvision.io import ImageReadMode
+import numpy as np
 
 from albumentations.core.composition import BaseCompose
 
@@ -24,7 +25,8 @@ class SatelliteDataset(Dataset):
             add_data_dir: Optional[str] = None,
             hist_equalization: bool = False,
             aug_transform: Optional[BaseCompose] = AUG_TRANSFORM,
-            include_low_quality_mask: bool = False
+            include_low_quality_mask: bool = False,
+            include_fid: bool = False,
     ):
         """
         Parameters
@@ -41,12 +43,18 @@ class SatelliteDataset(Dataset):
             An albumentation transform that is applied to both the satellite image and the road mask.
         include_low_quality_mask
             If specified, will load and stack low quality masks from /lowqualitymask together with the satellite image
+        include_fid
+            If in addition to the mask, flow, intersection and deadend masks should be loaded
         """
         self.data_dir = data_dir
         self.add_data_dir = add_data_dir
         self.include_low_quality_mask = include_low_quality_mask
+        self.include_fid = include_fid
         self.img_paths = [os.path.join(self.data_dir, 'images', f) for f in os.listdir(os.path.join(self.data_dir, 'images')) if f.endswith('.png')]
-        self.mask_paths = [os.path.join(self.data_dir, 'groundtruth', os.path.split(p)[-1]) for p in self.img_paths]
+        if self.include_fid:
+            self.mask_paths = [os.path.join(self.data_dir, 'transformed/mask_flow_intersection_deadend', os.path.split(p)[-1].split('.')[0] + '.npy') for p in self.img_paths]
+        else:
+            self.mask_paths = [os.path.join(self.data_dir, 'groundtruth', os.path.split(p)[-1]) for p in self.img_paths]
         self.low_quality_mask_paths = [os.path.join(self.data_dir, 'lowqualitymask', os.path.split(p)[-1]) for p in self.img_paths]
 
         self.hist_equalization = hist_equalization
@@ -56,8 +64,12 @@ class SatelliteDataset(Dataset):
         if self.add_data_dir:
             # add additional data
             add_img_paths = [os.path.join(self.add_data_dir, 'images', f) for f in os.listdir(os.path.join(self.add_data_dir, 'images')) if f.endswith('.png')]
-            add_mask_paths = [os.path.join(self.add_data_dir, 'groundtruth', os.path.split(p)[-1]) for p in add_img_paths]
+            if self.include_fid:
+                add_mask_paths = [os.path.join(self.add_data_dir, 'transformed/mask_flow_intersection_deadend', os.path.split(p)[-1].split('.')[0] + '.npy') for p in add_img_paths]
+            else:
+                add_mask_paths = [os.path.join(self.add_data_dir, 'groundtruth', os.path.split(p)[-1]) for p in add_img_paths]
             add_low_quality_mask_paths = [os.path.join(self.add_data_dir, 'lowqualitymask', os.path.split(p)[-1]) for p in add_img_paths]
+                
             self.img_paths += add_img_paths
             self.mask_paths += add_mask_paths
             self.low_quality_mask_paths += add_low_quality_mask_paths
@@ -74,7 +86,11 @@ class SatelliteDataset(Dataset):
 
         # read img and mask
         img = torchvision.io.read_image(img_path, mode=ImageReadMode.RGB)
-        mask = torchvision.io.read_image(mask_path, mode=ImageReadMode.GRAY)/255
+
+        if self.include_fid:
+            mask = torch.Tensor(np.load(mask_path))
+        else:
+            mask = torchvision.io.read_image(mask_path, mode=ImageReadMode.GRAY)/255
 
         if self.hist_equalization:
             img = F.equalize(img)

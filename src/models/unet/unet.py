@@ -17,13 +17,15 @@ class UNet(nn.Module):
             - bottom: constructor of the middle-piece of the bottom-most layer (if left as None => net will be V shaped)
             - multiscale_final: does the final layer receive all outputs of the layers below (bilinearly upsampled) 
                                 or just the final (most coarse grained) output?
+            - out_channels: how many outputs should the unet generate?
     """
 
     def __init__(self, backbone: ABackbone,
                  up_block_ctor: t.Callable[[int], nn.Module],
                  final: t.Optional[nn.Module] = None,
                  bottom_ctor: t.Optional[t.Callable[[int], nn.Module]] = None,
-                 multiscale_final: bool = False):
+                 multiscale_final: bool = False,
+                 out_channels: int = 1):
         super().__init__()
 
         # down nodes / encoder
@@ -42,8 +44,8 @@ class UNet(nn.Module):
             self.final = final
         else:
             self.final = nn.Sequential(
-                nn.LazyConvTranspose2d(1, kernel_size=2, stride=2),
-                nn.BatchNorm2d(1),
+                nn.LazyConvTranspose2d(out_channels, kernel_size=2, stride=2),
+                nn.BatchNorm2d(out_channels),
                 nn.Sigmoid()
             )
 

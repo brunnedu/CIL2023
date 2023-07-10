@@ -10,18 +10,23 @@ import pytorch_lightning as pl
 
 from tqdm import tqdm
 
-from src.utils import get_ckpt_path, load_wrapper
+from src.utils import get_ckpt_path, load_wrapper, prime_factors
 
 
 def predict(
         image: torch.Tensor,
         original_size: t.Tuple[int],
         pl_wrapper: pl.LightningModule,
-        device: str
+        device: str,
+        select_channel: t.Optional[int] = None, 
 ) -> torch.Tensor:
     assert image.shape[0] == 1
     output = pl_wrapper(image.to(device))
     output = F.interpolate(output, original_size, mode='bilinear')
+
+    if select_channel is not None:
+        output = output[select_channel]
+
     return output
 
 
@@ -31,6 +36,7 @@ def predict_patches(
         subdivisions: t.Tuple[int],
         pl_wrapper: pl.LightningModule,
         device: str = None,
+        select_channel: t.Optional[int] = None, 
 ) -> torch.Tensor:
     """
     Predicts a large image by splitting it into patches, predicting each patch individually and finally averaging them.
@@ -57,6 +63,10 @@ def predict_patches(
     # pass patches through model
     inputs = patches.permute(0, 2, 3, 1, 4, 5).reshape(-1, C, ph, pw)
     outputs = pl_wrapper(inputs.to(device))
+
+    if select_channel is not None:
+        outputs = outputs[:,select_channel,:,:].unsqueeze(1)
+
     ch_out = outputs.shape[1]
 
     # overlay predicted patches and average
@@ -76,7 +86,8 @@ def predict_patches_old(
         patch_size: t.Tuple[int],
         subdivisions: t.Tuple[int],
         pl_wrapper: pl.LightningModule,
-        device: str
+        device: str,
+        select_channel: t.Optional[int] = None, 
 ) -> torch.Tensor:
     """
     Old version of predict_patches. This version can't handle batched inputs but is able to handle (4, 4) subdivisions.
@@ -96,6 +107,9 @@ def predict_patches_old(
     images = [image[0, :, y:y + py, x:x + px] for y, x in positions]
     images = torch.stack(images, dim=0).to(device)
     outputs = pl_wrapper(images)
+    
+    if select_channel is not None:
+        outputs = outputs[:,select_channel,:,:]
 
     # compute the average over all generated patches
     output_total = torch.zeros((1, 1, H, W)).to(device)
@@ -114,6 +128,7 @@ def run_pl_wrapper(
         patches_config: t.Optional[t.Dict],
         out_dir: t.Optional[str] = None,
         use_last_ckpt: bool = False,
+        select_channel: t.Optional[int] = None, 
 ) -> float:
     """
     Run the model on every element of a dataset
@@ -126,6 +141,8 @@ def run_pl_wrapper(
     - out_dir (optional): where should the generated images be stored? 
         if not specified, will create a run folder inside the experiment folder
     - use_last_ckpt: if true, will use the last checkpoint instead of the best one
+    - select_channel: if not none, will return only the i'th channel from the prediction 
+        (e.g. if the model predicts multiple masks)
     """
 
     # create data loader
@@ -144,7 +161,7 @@ def run_pl_wrapper(
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # load model
-    pl_wrapper = load_wrapper(experiment_id, use_last_ckpt)
+    pl_wrapper = load_wrapper(experiment_id, use_last_ckpt, device=device)
     pl_wrapper = pl_wrapper.eval()
 
     if out_dir is None:
@@ -155,9 +172,9 @@ def run_pl_wrapper(
         for i, (names, original_sizes, images) in enumerate(tqdm(dataloader)):
             if patches_config:
                 output = predict_patches(images, patches_config['size'], patches_config['subdivisions'], pl_wrapper,
-                                         device)
+                                         device, select_channel)
             else:
-                output = predict(images, original_sizes[0], pl_wrapper, device)
+                output = predict(images, original_sizes[0], pl_wrapper, device, select_channel)
 
             output = output[0].to('cpu').squeeze().numpy() * 255
             cv2.imwrite(os.path.join(out_dir, names[0]), output)
