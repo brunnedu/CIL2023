@@ -13,6 +13,9 @@ We recommend using the conda package manager. Navigate to the CIL2023 folder and
 `conda activate cil`\
 `pip install -r requirements.txt`
 
+#### Preprocessing:
+Some models require prior extraction of masks (e.g. refinement, mask-flow-intersection-deadend approach etc). Make sure to run the corresponding notebooks or commands beforehand. 
+
 #### Training:
 1. Specify your train configuration in the `TRAIN_CONFIG` dictionary in `config.py`
 2. Execute `python main.py train` in the command line.
