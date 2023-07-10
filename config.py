@@ -119,6 +119,7 @@ RUN_CONFIG = {
         'size': (224, 224),
         'subdivisions': (4, 4)  # keep in mind original images are 400 x 400
     },
+    'select_channel': 0 if INCLUDE_FLOW_INTERSECTION_DEADEND else None,
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS
 }

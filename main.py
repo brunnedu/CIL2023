@@ -116,6 +116,7 @@ def _run(output_path, use_last_ckpt, no_auto_config):
         patches_config=RUN_CONFIG['patches_config'] if config['use_patches'] else None,
         out_dir=output_path,
         use_last_ckpt=use_last_ckpt,
+        select_channel=RUN_CONFIG['select_channel']
     )
 
 @cli.command()
