@@ -1,6 +1,7 @@
 from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
 
-from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock, SegmentationEnsemble
+from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock, SegmentationEnsemble, \
+    PatchPredictionModel
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
 from src.models import EfficientNetV2_S_Backbone, EfficientNetV2_M_Backbone, EfficientNetV2_L_Backbone, EfficientNet_B5_Backbone
 from src.models import MfidFinal
@@ -67,6 +68,18 @@ ENSEMBLE_MODEL_CONFIG = {
     },
 }
 
+PATCHES_MODEL_CONFIG = {
+    'model_cls': PatchPredictionModel,  # set PREDICT_USING_PATCHES = False and MODEL_RES = 400 when using this model
+    'model_kwargs': {
+        'base_model_config': UNET_MODEL_CONFIG,  # can use any model config here
+        'patches_config': {
+            'patch_size': (224, 224),
+            'subdivisions': (2, 2)  # keep in mind original images are 400 x 400
+        },
+    },
+
+}
+
 MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
@@ -86,7 +99,7 @@ PL_WRAPPER_KWARGS = {
     'lr_scheduler_kwargs': {
         'mode': 'min',
         'factor': 0.2,
-        'patience': 10,
+        'patience': 5,
     },
 }
 
@@ -111,10 +124,10 @@ TRAIN_CONFIG = {
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
     'pl_trainer_kwargs': {
         'max_epochs': 100,
-        'log_every_n_steps': 1,
+        'log_every_n_steps': 10,
         'callbacks': [
-            # (EarlyStopping, {'monitor': 'val_loss', 'mode': 'min', 'patience': 1}),
-            # (LearningRateMonitor, {'logging_interval': 'epoch'}),
+            (LearningRateMonitor, {'logging_interval': 'epoch'}),
+            # (EarlyStopping, {'monitor': 'val_acc', 'mode': 'max', 'patience': 20}),
         ]
     },
     'train_pl_wrapper_kwargs': {
