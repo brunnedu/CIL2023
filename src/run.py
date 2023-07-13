@@ -3,6 +3,7 @@ import typing as t
 
 import torch
 import torch.nn.functional as F
+from torch import nn
 from torch.utils.data import Dataset, DataLoader
 import cv2
 
@@ -31,10 +32,10 @@ def predict(
 
 
 def predict_patches(
+        model: nn.Module,
         image: torch.Tensor,
         patch_size: t.Tuple[int],
         subdivisions: t.Tuple[int],
-        pl_wrapper: pl.LightningModule,
         device: str = None,
         select_channel: t.Optional[int] = None, 
 ) -> torch.Tensor:
@@ -62,7 +63,7 @@ def predict_patches(
 
     # pass patches through model
     inputs = patches.permute(0, 2, 3, 1, 4, 5).reshape(-1, C, ph, pw)
-    outputs = pl_wrapper(inputs.to(device))
+    outputs = model(inputs.to(device))
 
     if select_channel is not None:
         outputs = outputs[:,select_channel,:,:].unsqueeze(1)
@@ -82,10 +83,10 @@ def predict_patches(
 
 
 def predict_patches_old(
+        model: nn.Module,
         image: torch.Tensor,
         patch_size: t.Tuple[int],
         subdivisions: t.Tuple[int],
-        pl_wrapper: pl.LightningModule,
         device: str,
         select_channel: t.Optional[int] = None, 
 ) -> torch.Tensor:
@@ -106,7 +107,7 @@ def predict_patches_old(
 
     images = [image[0, :, y:y + py, x:x + px] for y, x in positions]
     images = torch.stack(images, dim=0).to(device)
-    outputs = pl_wrapper(images)
+    outputs = model(images)
     
     if select_channel is not None:
         outputs = outputs[:,select_channel,:,:]
@@ -171,7 +172,7 @@ def run_pl_wrapper(
     with torch.no_grad():
         for i, (names, original_sizes, images) in enumerate(tqdm(dataloader)):
             if patches_config:
-                output = predict_patches(images, patches_config['size'], patches_config['subdivisions'], pl_wrapper,
+                output = predict_patches(pl_wrapper, images, patches_config['size'], patches_config['subdivisions'],
                                          device, select_channel)
             else:
                 output = predict(images, original_sizes[0], pl_wrapper, device, select_channel)
