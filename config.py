@@ -17,7 +17,7 @@ from torchvision import transforms
 
 PREDICT_USING_PATCHES = True
 IS_REFINEMENT = False
-INCLUDE_FLOW_INTERSECTION_DEADEND = True
+INCLUDE_FLOW_INTERSECTION_DEADEND = False
 MODEL_RES = 224  # Adjust resolution based on the model you're using
 # Default: 224 (ResNets etc.)
 # EfficientNetV2 S: 384, M: 480, L: 480
@@ -37,12 +37,9 @@ RUN_AUG_TRANSFORM = None if PREDICT_USING_PATCHES else transforms.Resize(MODEL_R
 
 UNET_MODEL_CONFIG = {
     'model_cls': UNet,
-    'backbone_cls': Resnet50Backbone,
+    'backbone_cls': Resnet18Backbone,
     'model_kwargs': {
         'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
-        'out_channels': 4 if INCLUDE_FLOW_INTERSECTION_DEADEND else 1,
-        'final': MfidFinal(64),
-        'multiscale_final': True
     },
     'backbone_kwargs': {
         'in_channels': 4 if IS_REFINEMENT else 3,
@@ -92,7 +89,7 @@ PL_WRAPPER_KWARGS = {
     },
     'optimizer_cls': Adam,
     'optimizer_kwargs': {
-        'lr': 1e-3,
+        'lr': 5e-4,
         'weight_decay': 0,
     },
     'lr_scheduler_cls': torch.optim.lr_scheduler.ReduceLROnPlateau,
@@ -108,6 +105,7 @@ TRAIN_CONFIG = {
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
     'train_dataset_kwargs': {
         'data_dir': 'data/data1k',  # use our data for training
+        # 'data_dir': '/cluster/scratch/{ETHZ_NAME}/data30k',  # use (renamed) 30k dataset on scratch on cluster
         'hist_equalization': False,
         'aug_transform': TRAIN_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT,
