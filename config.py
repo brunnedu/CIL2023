@@ -1,7 +1,7 @@
 from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
 
 from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock, SegmentationEnsemble, \
-    PatchPredictionModel
+    PatchPredictionModel, EResUNet
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
 from src.models import EfficientNetV2_S_Backbone, EfficientNetV2_M_Backbone, EfficientNetV2_L_Backbone, EfficientNet_B5_Backbone
 from src.models import MfidFinal
@@ -36,11 +36,9 @@ RUN_AUG_TRANSFORM = None if PREDICT_USING_PATCHES else transforms.Resize(MODEL_R
 # ======================================================================================================================
 
 UNET_MODEL_CONFIG = {
-    'model_cls': UNet,
+    'model_cls': EResUNet,
     'backbone_cls': Resnet18Backbone,
-    'model_kwargs': {
-        'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
-    },
+    'model_kwargs': {},
     'backbone_kwargs': {
         'in_channels': 4 if IS_REFINEMENT else 3,
         # 'concat_group_channels': True # only for efficientnet backbones
@@ -101,10 +99,10 @@ PL_WRAPPER_KWARGS = {
 }
 
 TRAIN_CONFIG = {
-    'experiment_id': 'test_run',  # should be changed for every run
+    'experiment_id': 'eresunet_r18_5k',  # should be changed for every run
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
     'train_dataset_kwargs': {
-        'data_dir': 'data/data1k',  # use our data for training
+        'data_dir': 'data/data5k',  # use our data for training
         # 'data_dir': '/cluster/scratch/{ETHZ_NAME}/data30k',  # use (renamed) 30k dataset on scratch on cluster
         'hist_equalization': False,
         'aug_transform': TRAIN_AUG_TRANSFORM,
