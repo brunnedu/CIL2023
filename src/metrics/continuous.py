@@ -19,6 +19,9 @@ class JaccardLoss(nn.Module):
         p = (y_true + y_pred - y_true * y_pred).sum()
         return tp / p
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
+
 
 class DiceLoss(nn.Module):
     def __init__(self, smooth=1.0):
@@ -32,6 +35,9 @@ class DiceLoss(nn.Module):
         tp = (y_pred * y_true).sum(1)
 
         return 1.0 - ((2.0 * tp + self.smooth) / ((y_pred + y_true).sum(1) + self.smooth)).mean()
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(smooth={self.smooth})"
 
 
 class BinaryF1Score(nn.Module):
@@ -65,6 +71,9 @@ class BinaryF1Score(nn.Module):
 
         return self.reduction_fn(f1scores)
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(smooth={self.smooth}, alpha={self.alpha})"
+
 
 class OneMinusLossScore(nn.Module):
     def __init__(self, loss_fn: nn.Module):
@@ -95,6 +104,9 @@ class FocalLoss(nn.Module):
 
         return loss.mean()
 
+    def __repr__(self):
+        return f"FocalLoss(alpha={self.alpha}, gamma={self.gamma}, reduction={self.reduction})"
+
 
 class PatchAccuracy(torch.nn.Module):
     """
@@ -123,6 +135,9 @@ class PatchAccuracy(torch.nn.Module):
         patches = y.reshape(-1, 1, h_patches, self.patch_size, w_patches, self.patch_size).mean((-1, -3)) > self.cutoff
 
         return patches_hat, patches
+
+    def __repr__(self):
+        return f"PatchAccuracy(patch_size={self.patch_size}, cutoff={self.cutoff})"
 
 
 class PatchF1Score(PatchAccuracy):
@@ -153,6 +168,9 @@ class PatchF1Score(PatchAccuracy):
         f1_score = 2 * precision * recall / (precision + recall + self.eps)
 
         return f1_score
+
+    def __repr__(self):
+        return f"PatchF1Score(patch_size={self.patch_size}, cutoff={self.cutoff}, eps={self.eps})"
 
 
 
