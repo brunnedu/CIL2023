@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -7,13 +8,15 @@ import click
 import datetime
 import shutil
 
+import torch
+
 from src.dataset import SatelliteDataset, SatelliteDatasetRun
 from src.models.unet.unet import UNet
 from src.train import train_pl_wrapper
 from src.run import run_pl_wrapper
 
 from src.mask_to_submission import masks_to_submission
-from src.utils import create_logger, ensure_dir, init_model, get_config, init_wrapper
+from src.utils import create_logger, ensure_dir, init_model, get_config, init_wrapper, load_segmentation_masks
 
 # import the train config
 from config import TRAIN_CONFIG, RUN_CONFIG
@@ -57,7 +60,7 @@ def train():
     )
 
 
-def _run(output_path, use_last_ckpt, no_auto_config):
+def _run(output_path, use_last_ckpt=False, no_auto_config=False):
     """
         Runs a model on all the provided data and saves the output
 
@@ -89,10 +92,11 @@ def _run(output_path, use_last_ckpt, no_auto_config):
         select_channel=RUN_CONFIG['select_channel']
     )
 
+
 @cli.command()
 @click.option('-o', '--output_path', default=None,
               help='Where the outputs should be stored')
-@click.option('-l', '--use_last_ckpt', is_flag=True, 
+@click.option('-l', '--use_last_ckpt', is_flag=True,
               help='Use last checkpoint for inference')
 @click.option('-a', '--no_auto_config', is_flag=True,
               help='Dont try to retrieve original RUN_CONFIG from experiment directory')
@@ -101,6 +105,7 @@ def run(output_path, use_last_ckpt, no_auto_config):
         Runs a model on all the provided data and saves the output
     """
     _run(output_path, use_last_ckpt, no_auto_config)
+
 
 @cli.command()
 def prepare_for_refinement():
@@ -156,18 +161,36 @@ def submission(experiment_id, foreground_threshold, use_last_ckpt):
 
 
 @cli.command()
-@click.argument('ground_truth_dir', type=click.Path(exists=True), required=True)
-@click.argument('predicted_dir', type=click.Path(exists=True), required=True)
-def evaluate(ground_truth_dir, predicted_dir):
+@click.argument('test_data_dir', type=click.Path(exists=True), required=True, default=os.path.join('data', 'test500'))
+def evaluate(test_data_dir):
     """
         Generates statistics for predictions vs ground truths
     """
+    experiment_id = RUN_CONFIG['experiment_id']
+    # Generate Predictions
+    print('Generating Predictions if necessary')
+    output_path = os.path.join('out', experiment_id, os.path.basename(test_data_dir))
+    if not os.path.exists(output_path):
+        RUN_CONFIG['dataset_kwargs']['data_dir'] = test_data_dir
+        _run(output_path)
 
-    # Prepare Data
+    # Evaluate Predictions
+    print('Evaluating Predictions')
+    predictions = load_segmentation_masks(output_path)
+    groundtruths = load_segmentation_masks(os.path.join(test_data_dir, 'groundtruth'))
 
-    # Execute
+    results = {}
+    eval_metrics = RUN_CONFIG['eval_metrics']
+    for metric in eval_metrics:
+        evals = torch.stack([metric(pred, gt) for pred, gt in zip(predictions, groundtruths)])
+        results[str(metric)] = {}
+        results[str(metric)]['mean'] = evals.mean().item()
+        results[str(metric)]['std'] = evals.std().item()
 
-    # Generate Statistics
+    # Save statistics
+    print('Saving Statistics')
+    with open(os.path.join(output_path, 'eval_results.json'), 'w') as f:
+        json.dump(results, f, indent=4)
 
 
 if __name__ == '__main__':
