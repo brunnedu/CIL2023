@@ -140,7 +140,6 @@ RUN_CONFIG = {
     'experiment_id': 'test_run_2023-06-23_15-34-04',
     'dataset_kwargs': {
         'data_dir': 'data/test',
-        'hist_equalization': False,
         'transform': RUN_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT
     },
@@ -151,5 +150,10 @@ RUN_CONFIG = {
     },
     'select_channel': 0 if INCLUDE_FLOW_INTERSECTION_DEADEND else None,
     'model_config': MODEL_CONFIG,
-    'pl_wrapper_kwargs': PL_WRAPPER_KWARGS
+    'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
+    'eval_metrics': [
+        PatchF1Score(patch_size=16, cutoff=0.25),
+        BinaryF1Score(alpha=100.0),
+        PatchAccuracy(patch_size=16, cutoff=0.25),
+    ],
 }

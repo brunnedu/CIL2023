@@ -10,6 +10,7 @@ import optuna
 import torch
 import torchvision
 from pytorch_lightning import Callback, LightningModule, Trainer
+from torchvision.io import ImageReadMode
 from torchvision.transforms import Normalize
 from matplotlib import pyplot as plt
 
@@ -209,6 +210,16 @@ def ensure_dir(dir_path: str):
     """
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
+
+
+def load_segmentation_masks(dir_path):
+    masks = []
+    mask_paths = sorted([os.path.join(dir_path, f) for f in os.listdir(dir_path) if f.endswith('.png')])
+    for mask_path in mask_paths:
+        mask = torchvision.io.read_image(mask_path, mode=ImageReadMode.GRAY) / 255.0
+        masks.append(mask)
+    masks = torch.stack(masks)
+    return masks
 
 
 ################
