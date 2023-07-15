@@ -229,3 +229,31 @@ class TopologyPreservingLoss(nn.Module):
         tsens = (torch.sum(torch.multiply(skel_true, y_pred)[:,1:,...]) + self.smooth) / (torch.sum(skel_true[:,1:,...]) + self.smooth)    
         cl_dice = 1.0 - 2.0 * (tprec * tsens) / (tprec + tsens)
         return (1.0 - self.weight_cldice) * dice + self.weight_cldice * cl_dice
+    
+
+
+
+
+####################
+### VOTENET LOSS ###
+####################
+
+class UncertaintyMSELoss(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, y_pred, y_true):
+        y_pred_mean, y_pred_std = torch.chunk(y_pred, 2, dim=1)
+        y_pred_var = y_pred_std**2
+        return (1 / (2.0 * y_pred_var) * (y_pred_mean - y_true)**2 + 0.5 * torch.log(y_pred_var)).mean()
+    
+class UncertaintyMSEOnlyLoss(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, y_pred, y_true):
+        y_pred_mean, y_pred_std = torch.chunk(y_pred, 2, dim=1)
+        return F.mse_loss(y_pred_mean, y_true)
+        #return F.l1_loss(y_pred_mean, y_true)
+    
+# TODO: measure distance of angles on unit circle
