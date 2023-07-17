@@ -168,11 +168,13 @@ def evaluate(test_data_dir):
     """
     experiment_id = RUN_CONFIG['experiment_id']
     # Generate Predictions
-    print('Generating Predictions if necessary')
     output_path = os.path.join('out', experiment_id, os.path.basename(test_data_dir))
     if not os.path.exists(output_path):
+        print("No predictions found, generating them now")
         RUN_CONFIG['dataset_kwargs']['data_dir'] = test_data_dir
         _run(output_path)
+    else:
+        print("Predictions found, skipping generation")
 
     # Evaluate Predictions
     print('Evaluating Predictions')
