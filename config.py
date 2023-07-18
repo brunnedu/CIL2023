@@ -118,7 +118,7 @@ TRAIN_CONFIG = {
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
-    'pl_trainer_kwargs': {
+    'pl_trainer_kwargs': { 
         'max_epochs': 100,
         'log_every_n_steps': 10,
         'callbacks': [
@@ -135,7 +135,7 @@ TRAIN_CONFIG = {
 }
 
 RUN_CONFIG = {
-    'experiment_id': 'test_run_2023-06-23_15-34-04',
+    'experiment_id': 'MODIFY_THIS',
     'dataset_kwargs': {
         'data_dir': 'data/test',
         'transform': RUN_AUG_TRANSFORM,
@@ -150,6 +150,7 @@ RUN_CONFIG = {
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
     'eval_metrics': [
+        FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
         PatchF1Score(patch_size=16, cutoff=0.25),
         BinaryF1Score(alpha=100.0),
         PatchAccuracy(patch_size=16, cutoff=0.25),
