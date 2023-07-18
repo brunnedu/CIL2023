@@ -50,7 +50,7 @@ class UpBlock(nn.Module):
         - UNet: s is previous output wrapped in a list
     """
 
-    def __init__(self, nr_channels: int, up_mode: str = 'upconv'):
+    def __init__(self, nr_channels: int, up_mode: str = 'upconv', activation: nn.Module = nn.ReLU(inplace=True)):
         super().__init__()
 
         if up_mode == 'upconv':
@@ -61,11 +61,11 @@ class UpBlock(nn.Module):
         self.layer = nn.Sequential(
             nn.LazyConv2d(nr_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(nr_channels),
-            nn.ReLU(inplace=True),
+            activation,
 
             nn.Conv2d(nr_channels, nr_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(nr_channels),
-            nn.ReLU(inplace=True)
+            activation
         )
 
     def forward(self, b, s):
