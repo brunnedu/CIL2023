@@ -1,6 +1,7 @@
 from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
 
-from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock, SegmentationEnsemble
+from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock, SegmentationEnsemble, \
+    PatchPredictionModel, EResUNet
 from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Resnet101Backbone, Resnet152Backbone
 from src.models import EfficientNetV2_S_Backbone, EfficientNetV2_M_Backbone, EfficientNetV2_L_Backbone, EfficientNet_B5_Backbone
 from src.models import MfidFinal
@@ -16,7 +17,7 @@ from torchvision import transforms
 
 PREDICT_USING_PATCHES = True
 IS_REFINEMENT = False
-INCLUDE_FLOW_INTERSECTION_DEADEND = True
+INCLUDE_FLOW_INTERSECTION_DEADEND = False
 MODEL_RES = 224  # Adjust resolution based on the model you're using
 # Default: 224 (ResNets etc.)
 # EfficientNetV2 S: 384, M: 480, L: 480
@@ -35,14 +36,9 @@ RUN_AUG_TRANSFORM = None if PREDICT_USING_PATCHES else transforms.Resize(MODEL_R
 # ======================================================================================================================
 
 UNET_MODEL_CONFIG = {
-    'model_cls': UNet,
-    'backbone_cls': Resnet50Backbone,
-    'model_kwargs': {
-        'up_block_ctor': lambda ci: UpBlock(ci, up_mode='upconv'),
-        'out_channels': 4 if INCLUDE_FLOW_INTERSECTION_DEADEND else 1,
-        'final': MfidFinal(64),
-        'multiscale_final': True
-    },
+    'model_cls': EResUNet,
+    'backbone_cls': Resnet18Backbone,
+    'model_kwargs': {},
     'backbone_kwargs': {
         'in_channels': 4 if IS_REFINEMENT else 3,
         # 'concat_group_channels': True # only for efficientnet backbones
@@ -67,6 +63,18 @@ ENSEMBLE_MODEL_CONFIG = {
     },
 }
 
+PATCHES_MODEL_CONFIG = {
+    'model_cls': PatchPredictionModel,  # set PREDICT_USING_PATCHES = False and MODEL_RES = 400 when using this model
+    'model_kwargs': {
+        'base_model_config': UNET_MODEL_CONFIG,  # can use any model config here
+        'patches_config': {
+            'patch_size': (224, 224),
+            'subdivisions': (2, 2)  # keep in mind original images are 400 x 400
+        },
+    },
+
+}
+
 MODEL_CONFIG = UNET_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
@@ -79,22 +87,23 @@ PL_WRAPPER_KWARGS = {
     },
     'optimizer_cls': Adam,
     'optimizer_kwargs': {
-        'lr': 1e-3,
+        'lr': 5e-4,
         'weight_decay': 0,
     },
     'lr_scheduler_cls': torch.optim.lr_scheduler.ReduceLROnPlateau,
     'lr_scheduler_kwargs': {
         'mode': 'min',
         'factor': 0.2,
-        'patience': 10,
+        'patience': 5,
     },
 }
 
 TRAIN_CONFIG = {
-    'experiment_id': 'test_run',  # should be changed for every run
+    'experiment_id': 'eresunet_r18_5k',  # should be changed for every run
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
     'train_dataset_kwargs': {
-        'data_dir': 'data/data1k',  # use our data for training
+        'data_dir': 'data/data5k',  # use our data for training
+        # 'data_dir': '/cluster/scratch/{ETHZ_NAME}/data30k',  # use (renamed) 30k dataset on scratch on cluster
         'hist_equalization': False,
         'aug_transform': TRAIN_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT,
@@ -109,12 +118,12 @@ TRAIN_CONFIG = {
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
-    'pl_trainer_kwargs': {
+    'pl_trainer_kwargs': { 
         'max_epochs': 100,
-        'log_every_n_steps': 1,
+        'log_every_n_steps': 10,
         'callbacks': [
-            # (EarlyStopping, {'monitor': 'val_loss', 'mode': 'min', 'patience': 1}),
-            # (LearningRateMonitor, {'logging_interval': 'epoch'}),
+            (LearningRateMonitor, {'logging_interval': 'epoch'}),
+            # (EarlyStopping, {'monitor': 'val_acc', 'mode': 'max', 'patience': 20}),
         ]
     },
     'train_pl_wrapper_kwargs': {
@@ -126,10 +135,9 @@ TRAIN_CONFIG = {
 }
 
 RUN_CONFIG = {
-    'experiment_id': 'test_run_2023-06-23_15-34-04',
+    'experiment_id': 'MODIFY_THIS',
     'dataset_kwargs': {
         'data_dir': 'data/test',
-        'hist_equalization': False,
         'transform': RUN_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT
     },
@@ -140,5 +148,11 @@ RUN_CONFIG = {
     },
     'select_channel': 0 if INCLUDE_FLOW_INTERSECTION_DEADEND else None,
     'model_config': MODEL_CONFIG,
-    'pl_wrapper_kwargs': PL_WRAPPER_KWARGS
+    'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
+    'eval_metrics': [
+        FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
+        PatchF1Score(patch_size=16, cutoff=0.25),
+        BinaryF1Score(alpha=100.0),
+        PatchAccuracy(patch_size=16, cutoff=0.25),
+    ],
 }
