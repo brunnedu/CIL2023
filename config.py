@@ -6,7 +6,7 @@ from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Res
 from src.models import EfficientNetV2_S_Backbone, EfficientNetV2_M_Backbone, EfficientNetV2_L_Backbone, EfficientNet_B5_Backbone
 from src.models import MfidFinal
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, \
-    TopologyPreservingLoss
+    TopologyPreservingLoss, ThresholdBinaryF1Score
 from src.transforms import AUG_TRANSFORM
 import albumentations as A
 
@@ -152,7 +152,7 @@ RUN_CONFIG = {
     'eval_metrics': [
         FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
         PatchF1Score(patch_size=16, cutoff=0.25),
-        BinaryF1Score(alpha=100.0),
+        ThresholdBinaryF1Score(cutoff=0.25),
         PatchAccuracy(patch_size=16, cutoff=0.25),
     ],
 }
