@@ -26,7 +26,7 @@ def predict(
     output = F.interpolate(output, original_size, mode='bilinear')
 
     if select_channel is not None:
-        output = output[select_channel]
+        output = output[:,select_channel]
 
     return output
 

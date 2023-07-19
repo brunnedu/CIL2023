@@ -1,0 +1,18 @@
+{
+    "FocalLoss(alpha=0.25, gamma=2.0, reduction=none)": {
+        "mean": 0.5474295020103455,
+        "std": 0.027673911303281784
+    },
+    "PatchF1Score(patch_size=16, cutoff=0.5, eps=1e-10)": {
+        "mean": 0.17499038577079773,
+        "std": 0.08769018203020096
+    },
+    "ThresholdBinaryF1Score(cutoff=0.5)": {
+        "mean": 0.1842769831418991,
+        "std": 0.08317670971155167
+    },
+    "PatchAccuracy(patch_size=16, cutoff=0.5)": {
+        "mean": 0.4997616112232208,
+        "std": 0.020206378772854805
+    }
+}

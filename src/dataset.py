@@ -27,15 +27,16 @@ class SatelliteDataset(Dataset):
             aug_transform: Optional[BaseCompose] = AUG_TRANSFORM,
             include_low_quality_mask: bool = False,
             include_fid: bool = False,
+            groundtruth_subfolder: str = 'groundtruth',
     ):
         """
         Parameters
         ----------
         data_dir
-            Directory where the original data is located. Has to contain two subdirectories "images" & "groundtruth".
+            Directory where the original data is located. Has to contain two subdirectories "images" & "groundtruth" (or whatever subfolder is specified).
             Both subdirectories should contain files with matching names.
         add_data_dir
-            Directory where additional data is located. Has to contain two subdirectories "images" & "groundtruth".
+            Directory where additional data is located. Has to contain two subdirectories "images" & "groundtruth" (or whatever subfolder is specified).
             Both subdirectories should contain files with matching names.
         hist_equalization
             Whether to apply histogram equalization as pre-processing step or not.
@@ -45,6 +46,8 @@ class SatelliteDataset(Dataset):
             If specified, will load and stack low quality masks from /lowqualitymask together with the satellite image
         include_fid
             If in addition to the mask, flow, intersection and deadend masks should be loaded
+        groundtruth_subfolder
+            Relative path to the groundtruths
         """
         self.data_dir = data_dir
         self.add_data_dir = add_data_dir
@@ -54,7 +57,7 @@ class SatelliteDataset(Dataset):
         if self.include_fid:
             self.mask_paths = [os.path.join(self.data_dir, 'transformed/mask_flow_intersection_deadend', os.path.split(p)[-1].split('.')[0] + '.npy') for p in self.img_paths]
         else:
-            self.mask_paths = [os.path.join(self.data_dir, 'groundtruth', os.path.split(p)[-1]) for p in self.img_paths]
+            self.mask_paths = [os.path.join(self.data_dir, groundtruth_subfolder, os.path.split(p)[-1]) for p in self.img_paths]
         self.low_quality_mask_paths = [os.path.join(self.data_dir, 'lowqualitymask', os.path.split(p)[-1]) for p in self.img_paths]
 
         self.hist_equalization = hist_equalization
@@ -67,7 +70,7 @@ class SatelliteDataset(Dataset):
             if self.include_fid:
                 add_mask_paths = [os.path.join(self.add_data_dir, 'transformed/mask_flow_intersection_deadend', os.path.split(p)[-1].split('.')[0] + '.npy') for p in add_img_paths]
             else:
-                add_mask_paths = [os.path.join(self.add_data_dir, 'groundtruth', os.path.split(p)[-1]) for p in add_img_paths]
+                add_mask_paths = [os.path.join(self.add_data_dir, groundtruth_subfolder, os.path.split(p)[-1]) for p in add_img_paths]
             add_low_quality_mask_paths = [os.path.join(self.add_data_dir, 'lowqualitymask', os.path.split(p)[-1]) for p in add_img_paths]
                 
             self.img_paths += add_img_paths

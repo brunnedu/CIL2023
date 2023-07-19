@@ -38,6 +38,15 @@ Model will be trained to learn the difference between the current mask and the a
 1. Update the config to whatever you want, set IS_REFINEMENT = True
 1. You can now run training/testing like for basic training
 
+#### Votenet:
+1. Run the ADW-Transform notebook on the training and validation data (adjust DATASET_FOLDER). This gives you the groundtruths of the 3 modalities (angle, distance, width)
+2. Train a model for each of the 3 modalities (adjust the groundtruth_subfolder in config for each of them)
+3. Generate the mean and std for all 3 trained models on the validation and test data (adjust data_dir and select_channel [0 = mean, 1 = std])
+4. Run the ADW-Reconstruct notebook on the validation and test data. This gives you the mask priors.
+
+#### Random:
+Run `python main.py generate-random <in-dir> <out-dir>` to generate random masks.
+
 
 #### To see a list of all available commands type:
 `python main.py --help`

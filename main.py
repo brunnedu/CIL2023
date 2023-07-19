@@ -194,6 +194,17 @@ def evaluate(test_data_dir):
     with open(os.path.join(output_path, 'eval_results.json'), 'w') as f:
         json.dump(results, f, indent=4)
 
+@cli.command()
+@click.argument('in_dir')
+@click.argument('out_dir')
+def generate_random(in_dir, out_dir):
+    import numpy as np
+    import cv2
+    os.makedirs(out_dir, exist_ok=True)
+    for img_name in os.listdir(in_dir):
+        cv2.imwrite(os.path.join(out_dir, img_name), np.random.rand(400,400) * 255)
+        
+
 
 if __name__ == '__main__':
     cli()
