@@ -5,7 +5,7 @@ from src.models import Resnet18Backbone, Resnet34Backbone, Resnet50Backbone, Res
 from src.models import EfficientNetV2_S_Backbone, EfficientNetV2_M_Backbone, EfficientNetV2_L_Backbone, EfficientNet_B5_Backbone
 from src.models import MfidFinal, VotenetFinal
 from src.metrics import DiceLoss, JaccardLoss, FocalLoss, BinaryF1Score, PatchAccuracy, PatchF1Score, \
-    TopologyPreservingLoss, UncertaintyMSELoss, OneMinusLossScore, UncertaintyMSEOnlyLoss
+    TopologyPreservingLoss, UncertaintyMSELoss, OneMinusLossScore, UncertaintyMSEOnlyLoss, ThresholdBinaryF1Score
 from src.transforms import AUG_TRANSFORM
 import albumentations as A
 
@@ -68,10 +68,10 @@ PL_WRAPPER_KWARGS = {
 }
 
 TRAIN_CONFIG = {
-    'experiment_id': 'test_run',  # should be changed for every run
+    'experiment_id': 'votenet-angle',  # should be changed for every run
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
     'train_dataset_kwargs': {
-        'data_dir': 'data/data1k',  # use our data for training
+        'data_dir': 'data/data5k',  # use our data for training (2 x 5k)
         'hist_equalization': False,
         'aug_transform': TRAIN_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT,
@@ -95,7 +95,7 @@ TRAIN_CONFIG = {
         ]
     },
     'train_pl_wrapper_kwargs': {
-        'batch_size': 8,
+        'batch_size': 32,
         'num_workers_dl': 2,  # set to 0 if multiprocessing leads to issues
         'seed': 0,
         'save_checkpoints': True,
@@ -103,9 +103,9 @@ TRAIN_CONFIG = {
 }
 
 RUN_CONFIG = {
-    'experiment_id': 'test_run_2023-07-15_20-41-48',
+    'experiment_id': 'votenet-angle',
     'dataset_kwargs': {
-        'data_dir': 'data/training',
+        'data_dir': 'data/test500',
         'hist_equalization': False,
         'transform': RUN_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT
@@ -115,7 +115,13 @@ RUN_CONFIG = {
         'size': (224, 224),
         'subdivisions': (2, 2)  # keep in mind original images are 400 x 400
     },
-    'select_channel': 1,
+    'select_channel': 0, # 0 for mean, 1 for the std-dev
     'model_config': MODEL_CONFIG,
-    'pl_wrapper_kwargs': PL_WRAPPER_KWARGS
+    'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
+    'eval_metrics': [
+        FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
+        PatchF1Score(patch_size=16, cutoff=0.5),
+        ThresholdBinaryF1Score(cutoff=0.5),
+        PatchAccuracy(patch_size=16, cutoff=0.5),
+    ],
 }
