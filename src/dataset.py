@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+import typing as t
 
 import torch
 from torch import nn
@@ -22,9 +22,9 @@ class SatelliteDataset(Dataset):
     def __init__(
             self,
             data_dir: str = 'data/training',
-            add_data_dir: Optional[str] = None,
+            add_data_dir: t.Optional[str] = None,
             hist_equalization: bool = False,
-            aug_transform: Optional[BaseCompose] = AUG_TRANSFORM,
+            aug_transform: t.Optional[BaseCompose] = AUG_TRANSFORM,
             include_low_quality_mask: bool = False,
             include_fid: bool = False,
             groundtruth_subfolder: str = 'groundtruth',
@@ -142,7 +142,7 @@ class SatelliteDatasetRun(Dataset):
             self,
             data_dir: str = 'data/test',
             hist_equalization: bool = False,
-            transform: Optional[nn.Module] = RUN_TRANSFORM,
+            transform: t.Optional[nn.Module] = RUN_TRANSFORM,
             include_low_quality_mask: bool = False
     ):
         """
@@ -210,3 +210,186 @@ class SatelliteDatasetRun(Dataset):
         img = self.post_transform(img/255)
 
         return img_name, original_size, torch.cat([img, low_quality_mask], dim=0)
+
+
+# Ensemble Datasets
+
+class EnsembleSatelliteDataset(Dataset):
+    """
+    Dataset for loading satellite images and corresponding roadmap mask labels
+    """
+
+    def __init__(
+            self,
+            pred_dirs: t.List[str] = ['out/exp1_id/data5k', 'out/exp2_id/data5k'],
+            data_dir: str = os.path.join('data', 'data5k'),
+            aug_transform: t.Optional[BaseCompose] = AUG_TRANSFORM,
+            include_low_quality_mask: bool = False,
+    ):
+        """
+        Parameters
+        ----------
+        pred_dirs
+            Directories containing precomputed predictions over the dataset at data_dir.
+        data_dir
+            Directory where the original data is located. Has to contain two subdirectories "images" & "groundtruth".
+            Both subdirectories should contain files with matching names.
+        aug_transform
+            An albumentation transform that is applied to both the satellite image and the road mask.
+        include_low_quality_mask
+            If specified, will load and stack low quality masks from /lowqualitymask together with the satellite image
+        """
+        self.pred_dirs = pred_dirs
+        self.data_dir = data_dir
+        self.mask_dir = os.path.join(self.data_dir, 'groundtruth')
+        self.img_names = [img_name for img_name in os.listdir(self.mask_dir) if img_name.endswith('.png')]
+        self.include_low_quality_mask = include_low_quality_mask
+
+        self.aug_transform = aug_transform
+
+    def __len__(self):
+        return len(self.img_names)
+
+    def __getitem__(self, idx):
+        if self.include_low_quality_mask:
+            return self.get_with_low_quality_mask(idx)
+
+        img_name = self.img_names[idx]
+
+        pred_paths = [os.path.join(pred_dir, img_name) for pred_dir in self.pred_dirs]
+        mask_path = os.path.join(self.mask_dir, img_name)
+
+        # read predictions and target mask
+        preds = [torchvision.io.read_image(pred_path, mode=ImageReadMode.GRAY) / 255 for pred_path in pred_paths]
+        mask = torchvision.io.read_image(mask_path, mode=ImageReadMode.GRAY) / 255
+
+        if self.aug_transform:
+            # augment all precomputed preds together with target mask
+            preds_and_mask = preds.append(mask)
+            preds_and_mask = [img.permute(1, 2, 0).numpy() for img in preds_and_mask]
+            transformed = self.aug_transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
+                                             masks=preds_and_mask)
+            preds_and_mask = [torch.from_numpy(transformed['masks'][i]).permute(2, 0, 1) for i in
+                              range(len(preds_and_mask))]
+            preds = preds_and_mask[:-1]
+            mask = preds_and_mask[-1]
+
+        features = torch.cat(preds)
+
+        return features, mask
+
+    def get_with_low_quality_mask(self, idx):
+
+        img_name = self.img_names[idx]
+
+        pred_paths = [os.path.join(pred_dir, img_name) for pred_dir in self.pred_dirs]
+        mask_path = os.path.join(self.mask_dir, img_name)
+        low_quality_mask_path = os.path.join(self.data_dir, 'lowqualitymask', img_name)
+
+        # read predictions, low_quality_mask and target mask
+        preds = [torchvision.io.read_image(pred_path, mode=ImageReadMode.GRAY) / 255 for pred_path in pred_paths]
+        preds.append(torchvision.io.read_image(low_quality_mask_path, mode=ImageReadMode.GRAY) / 255)
+        mask = torchvision.io.read_image(mask_path, mode=ImageReadMode.GRAY) / 255
+
+        if self.aug_transform:
+            # augment all precomputed masks together with target mask
+            preds_and_mask = preds.append(mask)
+            preds_and_mask = [img.permute(1, 2, 0).numpy() for img in preds_and_mask]
+            transformed = self.aug_transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
+                                             masks=preds_and_mask)
+            preds_and_mask = [torch.from_numpy(transformed['masks'][i]).permute(2, 0, 1) for i in
+                              range(len(preds_and_mask))]
+            preds = preds_and_mask[:-1]
+            mask = preds_and_mask[-1]
+
+        features = torch.cat(preds)
+
+        print(features.shape)
+
+        return features, mask
+
+
+class EnsembleSatelliteDatasetRun(Dataset):
+    """
+    Dataset for loading satellite images and corresponding roadmap mask labels
+    """
+
+    def __init__(
+            self,
+            pred_dirs: t.List[str] = ['out/exp1_id/data5k', 'out/exp2_id/data5k'],
+            data_dir: str = os.path.join('data', 'data5k'),
+            aug_transform: t.Optional[BaseCompose] = AUG_TRANSFORM,
+            include_low_quality_mask: bool = False,
+    ):
+        """
+        Parameters
+        ----------
+        pred_dirs
+            Directories containing precomputed predictions over the dataset at data_dir.
+        data_dir
+            Directory where the original data is located. Has to contain two subdirectories "images" & "groundtruth".
+            Both subdirectories should contain files with matching names.
+        aug_transform
+            An albumentation transform that is applied to both the satellite image and the road mask.
+        include_low_quality_mask
+            If specified, will load and stack low quality masks from /lowqualitymask together with the satellite image
+        """
+        self.pred_dirs = pred_dirs
+        self.data_dir = data_dir
+        self.img_names = [img_name for img_name in os.listdir(os.path.join(self.data_dir, 'images')) if img_name.endswith('.png')]
+        self.include_low_quality_mask = include_low_quality_mask
+
+        self.aug_transform = aug_transform
+
+    def __len__(self):
+        return len(self.img_names)
+
+    def __getitem__(self, idx):
+        if self.include_low_quality_mask:
+            return self.get_with_low_quality_mask(idx)
+
+        img_name = self.img_names[idx]
+
+        pred_paths = [os.path.join(pred_dir, img_name) for pred_dir in self.pred_dirs]
+
+        # read predictions and target mask
+        preds = [torchvision.io.read_image(pred_path, mode=ImageReadMode.GRAY) / 255 for pred_path in pred_paths]
+
+        original_size = (preds[0].shape[1], preds[0].shape[2])
+
+        if self.aug_transform:
+            # augment all precomputed preds together with target mask
+            preds = [img.permute(1, 2, 0).numpy() for img in preds]
+            transformed = self.aug_transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
+                                             masks=preds)
+            preds = [torch.from_numpy(transformed['masks'][i]).permute(2, 0, 1) for i in
+                              range(len(preds))]
+
+        features = torch.cat(preds)
+
+        return img_name, original_size, features
+
+    def get_with_low_quality_mask(self, idx):
+
+        img_name = self.img_names[idx]
+
+        pred_paths = [os.path.join(pred_dir, img_name) for pred_dir in self.pred_dirs]
+        low_quality_mask_path = os.path.join(self.data_dir, 'lowqualitymask', img_name)
+
+        # read predictions, low_quality_mask and target mask
+        preds = [torchvision.io.read_image(pred_path, mode=ImageReadMode.GRAY) / 255 for pred_path in pred_paths]
+        preds.append(torchvision.io.read_image(low_quality_mask_path, mode=ImageReadMode.GRAY) / 255)
+
+        original_size = (preds[0].shape[1], preds[0].shape[2])
+
+        if self.aug_transform:
+            # augment all precomputed masks together with target mask
+            preds = [img.permute(1, 2, 0).numpy() for img in preds]
+            transformed = self.aug_transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
+                                             masks=preds)
+            preds = [torch.from_numpy(transformed['masks'][i]).permute(2, 0, 1) for i in
+                              range(len(preds))]
+
+        features = torch.cat(preds)
+
+        return img_name, original_size, features
