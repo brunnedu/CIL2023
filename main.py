@@ -10,7 +10,8 @@ import shutil
 
 import torch
 
-from src.dataset import SatelliteDataset, SatelliteDatasetRun
+from src.dataset import SatelliteDataset, SatelliteDatasetRun, EnsembleSatelliteDatasetRun, EnsembleSatelliteDataset
+from src.models import SegmentationEnsemble
 from src.models.unet.unet import UNet
 from src.train import train_pl_wrapper
 from src.run import run_pl_wrapper
@@ -43,9 +44,13 @@ def train():
     ensure_dir(experiment_dir)
     shutil.copy('config.py', os.path.join('out', experiment_id, 'config.py'))
 
-    # initialize dataset
-    ds_train = SatelliteDataset(**TRAIN_CONFIG['train_dataset_kwargs'])
-    ds_val = SatelliteDataset(**TRAIN_CONFIG['val_dataset_kwargs'])
+    # initialize datasets
+    if ['model_config']['model_cls'] == SegmentationEnsemble:
+        ds_train = EnsembleSatelliteDataset(**TRAIN_CONFIG['train_dataset_kwargs'])
+        ds_val = EnsembleSatelliteDataset(**TRAIN_CONFIG['val_dataset_kwargs'])
+    else:
+        ds_train = SatelliteDataset(**TRAIN_CONFIG['train_dataset_kwargs'])
+        ds_val = SatelliteDataset(**TRAIN_CONFIG['val_dataset_kwargs'])
 
     pl_wrapper = init_wrapper(TRAIN_CONFIG)
 
@@ -81,7 +86,10 @@ def _run(output_path, use_last_ckpt=False, no_auto_config=False):
         config = RUN_CONFIG
 
     # initialize dataset
-    dataset = SatelliteDatasetRun(**RUN_CONFIG['dataset_kwargs'])
+    if ['model_config']['model_cls'] == SegmentationEnsemble:
+        dataset = EnsembleSatelliteDatasetRun(**RUN_CONFIG['dataset_kwargs'])
+    else:
+        dataset = SatelliteDatasetRun(**RUN_CONFIG['dataset_kwargs'])
 
     run_pl_wrapper(
         experiment_id=experiment_id,
