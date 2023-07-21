@@ -32,8 +32,8 @@ def train_pl_wrapper(
     tb_logger.experiment.add_text('experiment_id', experiment_id)
 
     # create dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers_dl)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers_dl)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers_dl, generator=torch.Generator().manual_seed(seed))
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers_dl, generator=torch.Generator().manual_seed(seed))
 
     # instantiate trainer callbacks
     pl_trainer_callbacks = []
