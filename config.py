@@ -1,3 +1,5 @@
+import os
+
 from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
 
 from src.models import UNet, UNetPP, UpBlock, LUNet, MAUNet, DLinkNet, DLinkUpBlock, SegmentationEnsemble, \
@@ -48,18 +50,10 @@ UNET_MODEL_CONFIG = {
 ENSEMBLE_MODEL_CONFIG = {
     'model_cls': SegmentationEnsemble,
     'model_kwargs': {
-        'experiment_ids': [  # specify experiment ids of models to ensemble
-            'unet_basic_r18_upsample_patches_focalloss_test_run_2023-06-28_02-10-44',
-            'unet_basic_r18_upconv_patches_focalloss_test_run_2023-06-28_00-32-07',
-            'unetpp_basic_r18_upsample_patches_focalloss_test_run_2023-06-28_02-43-56',
-            'unetpp_basic_r18_upconv_patches_focalloss_test_run_2023-06-28_03-25-38',
-        ],
-        'freeze_submodels': True,  # decide whether to further train submodels
         'final_layer': nn.Sequential(  # define final layer to combine submodel outputs, if None the outputs will be averaged
             nn.LazyConv2d(1, kernel_size=3, stride=1, padding=1),
             nn.Sigmoid()
         ),
-        'last': False,  # if True, the submodels will be loaded from the last epoch instead of the best one
     },
 }
 
@@ -98,23 +92,28 @@ PL_WRAPPER_KWARGS = {
     },
 }
 
+ENSEMBLE_EXPERIMENT_IDS = [  # specify experiment ids of models to ensemble
+    'FINAL_unetpp_r50_upconv_patches_adam5e4_seed0_leakyrelu_2023-07-18_21-04-23',
+    'FINAL_unetpp_r50_upconv_patches_adam5e4_seed0_2023-07-17_11-09-58',
+]
+
 TRAIN_CONFIG = {
-    'experiment_id': 'eresunet_r18_5k',  # should be changed for every run
+    'experiment_id': 'ENSEMBLE_EXP_ID',  # should be changed for every run
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
     'train_dataset_kwargs': {
+        'pred_dirs': [f"/cluster/scratch/brunnedu/out/{exp_id}/data5k" for exp_id in ENSEMBLE_EXPERIMENT_IDS],
         'data_dir': 'data/data5k',  # use our data for training
         # 'data_dir': '/cluster/scratch/{ETHZ_NAME}/data30k',  # use (renamed) 30k dataset on scratch on cluster
-        'hist_equalization': False,
         'aug_transform': TRAIN_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT,
-        'include_fid': INCLUDE_FLOW_INTERSECTION_DEADEND,
+        # 'include_fid': INCLUDE_FLOW_INTERSECTION_DEADEND,
     },
     'val_dataset_kwargs': {
+        'pred_dirs': [f"/cluster/scratch/brunnedu/out/{exp_id}/training" for exp_id in ENSEMBLE_EXPERIMENT_IDS],
         'data_dir': 'data/training',  # use original training data for validation
-        'hist_equalization': False,
         'aug_transform': VAL_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT,
-        'include_fid': INCLUDE_FLOW_INTERSECTION_DEADEND,
+        # 'include_fid': INCLUDE_FLOW_INTERSECTION_DEADEND,
     },
     'model_config': MODEL_CONFIG,
     'pl_wrapper_kwargs': PL_WRAPPER_KWARGS,
@@ -137,6 +136,7 @@ TRAIN_CONFIG = {
 RUN_CONFIG = {
     'experiment_id': 'MODIFY_THIS',
     'dataset_kwargs': {
+        'pred_dirs': [f"/cluster/scratch/brunnedu/out/{exp_id}/test" for exp_id in ENSEMBLE_EXPERIMENT_IDS],
         'data_dir': 'data/test',
         'transform': RUN_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT
