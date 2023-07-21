@@ -318,7 +318,7 @@ class EnsembleSatelliteDatasetRun(Dataset):
             self,
             pred_dirs: t.List[str] = ['out/exp1_id/data5k', 'out/exp2_id/data5k'],
             data_dir: str = os.path.join('data', 'data5k'),
-            aug_transform: t.Optional[BaseCompose] = AUG_TRANSFORM,
+            transform: t.Optional[nn.Module] = RUN_TRANSFORM,
             include_low_quality_mask: bool = False,
     ):
         """
@@ -327,10 +327,9 @@ class EnsembleSatelliteDatasetRun(Dataset):
         pred_dirs
             Directories containing precomputed predictions over the dataset at data_dir.
         data_dir
-            Directory where the original data is located. Has to contain two subdirectories "images" & "groundtruth".
-            Both subdirectories should contain files with matching names.
-        aug_transform
-            An albumentation transform that is applied to both the satellite image and the road mask.
+            Directory where the test data is located. Has to contain a subdirectories named "images".
+        transform
+            A torchvision transform that is applied to the satellite images right after loading them.
         include_low_quality_mask
             If specified, will load and stack low quality masks from /lowqualitymask together with the satellite image
         """
@@ -339,7 +338,7 @@ class EnsembleSatelliteDatasetRun(Dataset):
         self.img_names = [img_name for img_name in os.listdir(os.path.join(self.data_dir, 'images')) if img_name.endswith('.png')]
         self.include_low_quality_mask = include_low_quality_mask
 
-        self.aug_transform = aug_transform
+        self.transform = transform
 
     def __len__(self):
         return len(self.img_names)
@@ -357,10 +356,10 @@ class EnsembleSatelliteDatasetRun(Dataset):
 
         original_size = (preds[0].shape[1], preds[0].shape[2])
 
-        if self.aug_transform:
+        if self.transform:
             # augment all precomputed preds together with target mask
             preds = [img.permute(1, 2, 0).numpy() for img in preds]
-            transformed = self.aug_transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
+            transformed = self.transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
                                              masks=preds)
             preds = [torch.from_numpy(transformed['masks'][i]).permute(2, 0, 1) for i in
                               range(len(preds))]
@@ -382,10 +381,10 @@ class EnsembleSatelliteDatasetRun(Dataset):
 
         original_size = (preds[0].shape[1], preds[0].shape[2])
 
-        if self.aug_transform:
+        if self.transform:
             # augment all precomputed masks together with target mask
             preds = [img.permute(1, 2, 0).numpy() for img in preds]
-            transformed = self.aug_transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
+            transformed = self.transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
                                              masks=preds)
             preds = [torch.from_numpy(transformed['masks'][i]).permute(2, 0, 1) for i in
                               range(len(preds))]
