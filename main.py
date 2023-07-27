@@ -45,7 +45,7 @@ def train():
     shutil.copy('config.py', os.path.join('out', experiment_id, 'config.py'))
 
     # initialize datasets
-    if ['model_config']['model_cls'] == SegmentationEnsemble:
+    if TRAIN_CONFIG['model_config']['model_cls'] == SegmentationEnsemble:
         ds_train = EnsembleSatelliteDataset(**TRAIN_CONFIG['train_dataset_kwargs'])
         ds_val = EnsembleSatelliteDataset(**TRAIN_CONFIG['val_dataset_kwargs'])
     else:
@@ -86,7 +86,7 @@ def _run(output_path, use_last_ckpt=False, no_auto_config=False):
         config = RUN_CONFIG
 
     # initialize dataset
-    if ['model_config']['model_cls'] == SegmentationEnsemble:
+    if config['model_config']['model_cls'] == SegmentationEnsemble:
         dataset = EnsembleSatelliteDatasetRun(**RUN_CONFIG['dataset_kwargs'])
     else:
         dataset = SatelliteDatasetRun(**RUN_CONFIG['dataset_kwargs'])
@@ -123,9 +123,7 @@ def prepare_for_refinement():
     paths = [
         'data/training',
         'data/test',
-        'data/data1k',
         'data/data5k',
-        'data/data30k',
     ]
 
     for path in paths:

@@ -265,8 +265,7 @@ class EnsembleSatelliteDataset(Dataset):
 
         if self.aug_transform:
             # augment all precomputed preds together with target mask
-            preds_and_mask = preds.append(mask)
-            preds_and_mask = [img.permute(1, 2, 0).numpy() for img in preds_and_mask]
+            preds_and_mask = [img.permute(1, 2, 0).numpy() for img in [*preds, mask]]
             transformed = self.aug_transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
                                              masks=preds_and_mask)
             preds_and_mask = [torch.from_numpy(transformed['masks'][i]).permute(2, 0, 1) for i in
@@ -293,8 +292,7 @@ class EnsembleSatelliteDataset(Dataset):
 
         if self.aug_transform:
             # augment all precomputed masks together with target mask
-            preds_and_mask = preds.append(mask)
-            preds_and_mask = [img.permute(1, 2, 0).numpy() for img in preds_and_mask]
+            preds_and_mask = [img.permute(1, 2, 0).numpy() for img in [*preds, mask]]
             transformed = self.aug_transform(image=torch.rand(3, 400, 400).permute(1, 2, 0).numpy(),
                                              masks=preds_and_mask)
             preds_and_mask = [torch.from_numpy(transformed['masks'][i]).permute(2, 0, 1) for i in

@@ -69,7 +69,7 @@ PATCHES_MODEL_CONFIG = {
 
 }
 
-MODEL_CONFIG = UNET_MODEL_CONFIG
+MODEL_CONFIG = ENSEMBLE_MODEL_CONFIG
 
 PL_WRAPPER_KWARGS = {
     'loss_fn': FocalLoss(alpha=0.25, gamma=2.0, bce_reduction='none'),
@@ -81,7 +81,7 @@ PL_WRAPPER_KWARGS = {
     },
     'optimizer_cls': Adam,
     'optimizer_kwargs': {
-        'lr': 5e-4,
+        'lr': 1e-3,
         'weight_decay': 0,
     },
     'lr_scheduler_cls': torch.optim.lr_scheduler.ReduceLROnPlateau,
@@ -98,9 +98,10 @@ ENSEMBLE_EXPERIMENT_IDS = [  # specify experiment ids of models to ensemble
 ]
 
 TRAIN_CONFIG = {
-    'experiment_id': 'ENSEMBLE_EXP_ID',  # should be changed for every run
+    'experiment_id': 'ENSEMBLE_Test',  # should be changed for every run
     'resume_from_checkpoint': False,  # set full experiment id (including timestamp) to resume from checkpoint
     'train_dataset_kwargs': {
+        # 'pred_dirs': [f"/cluster/scratch/brunnedu/out/{exp_id}/data5k" for exp_id in ENSEMBLE_EXPERIMENT_IDS],
         'pred_dirs': [f"/cluster/scratch/brunnedu/out/{exp_id}/data5k" for exp_id in ENSEMBLE_EXPERIMENT_IDS],
         'data_dir': 'data/data5k',  # use our data for training
         # 'data_dir': '/cluster/scratch/{ETHZ_NAME}/data30k',  # use (renamed) 30k dataset on scratch on cluster
@@ -109,7 +110,8 @@ TRAIN_CONFIG = {
         # 'include_fid': INCLUDE_FLOW_INTERSECTION_DEADEND,
     },
     'val_dataset_kwargs': {
-        'pred_dirs': [f"/cluster/scratch/brunnedu/out/{exp_id}/training" for exp_id in ENSEMBLE_EXPERIMENT_IDS],
+        # 'pred_dirs': [f"/cluster/scratch/brunnedu/out/{exp_id}/training" for exp_id in ENSEMBLE_EXPERIMENT_IDS],
+        'pred_dirs': [f"out/{exp_id}/training" for exp_id in ENSEMBLE_EXPERIMENT_IDS],
         'data_dir': 'data/training',  # use original training data for validation
         'aug_transform': VAL_AUG_TRANSFORM,
         'include_low_quality_mask': IS_REFINEMENT,
