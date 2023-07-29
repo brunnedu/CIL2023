@@ -54,8 +54,8 @@ Requires _U-Net++ R152 60k_, _D-LinkNet R152 60k_ and 3 models each with only R5
 6. Submit _test_
 
 ### _Ensemble incl. VoteNet_
-Requires _U-Net++ R152 60k_, _D-LinkNet R152 60k_ and 3 models each with only R50 backbone analogously (see ./report/configs).
-Additionally requires _VoteNet R50 10k_.
+Requires _U-Net++ R152 60k_, _D-LinkNet R152 60k_ and 3 models each with only R50 backbone analogously (see ./report/configs/submodels).
+Additionally, requires _VoteNet R50 10k_.
 1. Run all submodels on following datasets: _training_, _test_, _test500_, _data5k_ (for VoteNet this implies transformation, running and reconstruction)
 2. Train Ensemble based on submodel predictions (see ./report/configs/ensemble_baseline.py)
 3. Run & Evaluate Ensemble on _test500_
