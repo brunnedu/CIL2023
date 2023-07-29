@@ -23,8 +23,9 @@ We are using the following datasets:
 5. [test](https://www.kaggle.com/competitions/ethz-cil-road-segmentation-2023/data): submission dataset (144 images)
 
 ## Reproduce Results
-This is a step-by-step guide on how to reconstruct our results. Reoccuring steps will be explained below.
-Before starting: download all data and ideally put them into a ./data folder (otherwise you'll have to adjust the paths in the configs)
+This is a step-by-step guide on how to reproduce our results. Reoccuring steps will be explained below.
+Before starting: download all data and ideally put them into a ./data folder (otherwise you'll have to adjust the paths in the configs).
+Ensemble experiments require you to be on the `dustin/ensemble-precomputed` branch.
 
 #### _Random_
 1. Run `python main.py generate-random data/test500 out/random/test500` to generate random masks.
@@ -37,11 +38,11 @@ Before starting: download all data and ideally put them into a ./data folder (ot
 3. Run & Evaluate on _test500_
 4. Run & Submit _test_
 
-### _Ensemble Baseline_ [TODO]
-Requires _U-Net++ R152 60k_, _D-LinkNet R152 60k_ and 3 models each with only R50 backbone analogously (see ./report/configs)
-1. Run all models on all data
-2. Train Ensemble (see ./report/configs)
-3. Run & Evaluate on _test500_
+### _Ensemble Baseline_
+Requires _U-Net++ R152 60k_, _D-LinkNet R152 60k_ and 3 models each with only R50 backbone analogously (see ./report/configs/submodels)
+1. Run all submodels on following datasets: _training_, _test_, _test500_, _data5k_
+2. Train Ensemble based on submodel predictions (see ./report/configs/ensemble_baseline.py)
+3. Run & Evaluate Ensemble on _test500_
 4. Run & Submit _test_
 
 ### _VoteNet R50 10k_
@@ -52,19 +53,20 @@ Requires _U-Net++ R152 60k_, _D-LinkNet R152 60k_ and 3 models each with only R5
 5. Evaluate on _test500_
 6. Submit _test_
 
-### _Ensemble incl. VoteNet_ [TODO]
+### _Ensemble incl. VoteNet_
 Requires _U-Net++ R152 60k_, _D-LinkNet R152 60k_ and 3 models each with only R50 backbone analogously (see ./report/configs).
 Additionally requires _VoteNet R50 10k_.
-1. Run all models on all data except _data30k_ (for VoteNet this implies transformation, running and reconstruction)
-2. Train Ensemble (see ./report/configs)
-3. Run & Evaluate on _test500_
+1. Run all submodels on following datasets: _training_, _test_, _test500_, _data5k_ (for VoteNet this implies transformation, running and reconstruction)
+2. Train Ensemble based on submodel predictions (see ./report/configs/ensemble_baseline.py)
+3. Run & Evaluate Ensemble on _test500_
 4. Run & Submit _test_
 
-### _Refined Ensemble incl. VoteNet_ [TODO]
+### _Refined Ensemble incl. VoteNet_
 Requires a trained _Ensemble incl. VoteNet_
 1. Generate the low quality masks using `python main.py prepare-for-refinement` (equivalent to calling _run_ on all data)
 2. Update config (see ./report/configs for the specifics). Notably IS_REFINEMENT = True
 3. Train on _data5k_
+4. Optional: Repeat steps 1 & 3 arbitrarily often
 4. Run & Evaluate on _data500_
 5. Run & Submit _test_
 
