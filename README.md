@@ -25,7 +25,7 @@ We are using the following datasets:
 ## Reproduce Results
 This is a step-by-step guide on how to reproduce our results. Reoccuring steps will be explained below.
 Before starting: download all data and ideally put them into a ./data folder (otherwise you'll have to adjust the paths in the configs).
-Ensemble experiments require you to be on the `dustin/ensemble-precomputed` branch.
+Ensemble experiments require you to be on the `dustin/ensemble` branch.
 
 #### _Random_
 1. Run `python main.py generate-random data/test500 out/random/test500` to generate random masks.
