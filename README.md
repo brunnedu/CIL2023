@@ -4,7 +4,7 @@ This repository contains the code of our group project for the Computational Int
 ### Team Members:
 * Dustin Brunner
 * Michael Ungersböck
-* Siusing Yip
+* Siu-Sing Yip
 * Yanick Zengaffinen
 
 ## Setup
